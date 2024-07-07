@@ -1,0 +1,8 @@
+{
+    "editor.stickyScroll.enabled": false,
+    "editor.language.brackets": [
+
+    ],
+    "editor.autoSurround": "never",
+    "editor.insertSpaces": false
+}

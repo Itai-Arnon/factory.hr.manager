@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<!-- import of axios-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.2.1/axios.min.js"></script>
+	<script src="../utils/actions.js"></script>
+
+	<link rel="stylesheet" href="../css/general.css">
+	<title>Department</title>
+</head>
+
+<body onload="fetchData()">
+
+	<div class="user-login">
+		<h5 id="userElement"></h5>
+	</div>
+	<div class="main">
+		<div class="left-container">
+			<h1 class="head1">Departments Page</h1>
+			<h5>Pressing on Employee name will send you Edit Employee Page. Pressing on Departent name will show you the
+				Departent Employees </h5>
+			<table id="myTable">
+
+			</table>
+
+			<button style="width:50%;" onclick="fetchData()">Revert Back To Start </button>
+			<button style="width:50%;" onclick="gotoAddDept()">New Departent</button>
+			<button style="width:50%;" onclick="goToEmployees()">Go Back To Employees</button>
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./users.html'})()">Go To Users</button>
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./shifts.html'})()">Go To Shifts</button>
+			<button style="width:50%;" id="logout" onclick="(function ret(){window.location.href='./index.html'})()">Logout</button>
+
+			<div id="alert">
+				<h4 id="msg"></h4>
+			</div>
+
+		</div>
+		<div class="right-container">
+			<br />
+			<h2 id="employeeTable-text"></h2>
+			<table id="employeeTable"> </table>
+
+
+
+		</div>
+
+		<!-- buttons here-->
+
+	</div>
+
+</body>
+
+<script>
+
+
+	let alert_msg = document.querySelector("#alert")
+	let msg = alert_msg.querySelector("#msg")
+	let employees = null
+	let departments = null
+	let employeeTable = document.querySelector("#employeeTable")
+	let employeeTable_text = document.querySelector("#employeeTable-text")
+	const url_departments = "http://localhost:3000/departments"
+	const url_employees = "http://localhost:3000/employees"
+	let apiAction
+	let _token
+
+
+	async function fetchData() {
+		addToken();
+		({ data: employees = {} } = await apiAction.get(url_employees));
+		({ data: departments = {} } = await apiAction.get(url_departments));
+		console.log({ info_employees: employees });
+		console.log({ info_departments: departments });
+
+
+		if (!employees || !departments) {
+			employees = null
+			departments = null
+			message(3);
+		} else {
+			message(4);
+			data_fetched = true
+			clearTables("employee")
+			createMainTable()
+		}
+	}
+
+	function addToken() {
+		_token = sessionStorage.getItem("token")
+		apiAction = axios.create({
+			headers: {
+				'Content-Type': 'application/json',
+				'x-access-token': _token
+			}
+		});
+	}
+
+	async function createMainTable() {
+		clearTables("main")
+		let manager = {}
+		const myTable = document.querySelector("#myTable")
+		const headers = document.createElement("tr")
+		headers.innerHTML = `<th>Index</th><th>Department Name</th><th>Department Manager</th><th>Department Employees List</th>`
+		myTable.appendChild(headers)
+
+
+		departments.forEach((dept, idx) => {
+			manager = employees.find(emp => String(emp._id) === dept.managerId)
+
+			if (!manager) {
+				manager = { firstname: "Not", lastname: "Assigned" }
+				console.log(manager)
+			}
+			let tr = document.createElement("tr")
+			tr.innerHTML =
+				`<td><strong>${idx + 1}</strong></td>
+				<td id="dept-button"><strong> ${dept.name}</strong></td >
+                <td>${manager.firstname} ${manager.lastname}</td>
+				<td id="emp-button"> ${dept.name} Employees</td>`
+
+			const dept_button = tr.querySelector("#dept-button")
+			dept_button.setAttribute("style", "font-style:italic;")
+			dept_button.addEventListener("click", action1 = () => {
+				gotoEditDept(dept)
+				console.log({ info: "pressed" })
+			})
+			const emp_button = tr.querySelector("#emp-button")//emp button opens employee table
+			emp_button.setAttribute("style", "font-style:italic;")
+			emp_button.addEventListener("click", action2 = () => {
+				
+				createfilter(dept._id) //createsemployee table by dept
+				console.log({ info: event.target.tagName })
+			})
+
+			myTable.appendChild(tr)
+
+		});
+	}
+	async function createfilter(deptId) {
+		employeeTable_text.innerHTML = `<i>Employees From The Department You Chose<i>`
+		if (data_fetched) {
+			const filtered_employees = employees.filter(emp => emp.deptId === deptId)
+			if (!filtered_employees) {
+				message(6)
+				createEmployeeTable(deptId, [])
+			}
+			else {
+				createEmployeeTable(deptId, filtered_employees)
+			}
+		}
+		else message(3)
+	}
+
+	function createEmployeeTable(deptId, emp_data) {
+		
+		clearTables("employee") //clears the table
+		let dept = departments.find(dept => dept._id === deptId)
+		if (!dept) dept = { name: "Unassigned" }
+
+		const headers = document.createElement("tr")
+		headers.innerHTML = `<th>Index</th><th>Employees From The ${dept.name} Department</th>`
+		employeeTable.appendChild(headers)
+
+		if (emp_data.length == 0) {
+			let tr = document.createElement("tr")
+			tr.innerHTML =
+				`<td></td><td><strong>No Employees</strong></td><td></td>`
+			employeeTable.appendChild(tr)
+		}
+		else {
+			emp_data.forEach((e, idx) => {
+				let tr = document.createElement("tr")
+				tr.innerHTML =
+					`<td> <strong>${idx + 1}</strong></td>
+				<td id="emp-button"><strong> ${e.firstname} ${e.lastname}</strong></td>`
+
+				const emp_button = tr.querySelector("#emp-button")
+				emp_button.addEventListener("click", action = () => {
+					sessionStorage.setItem("employee", JSON.stringify(e))
+					window.location.href = "./editEmp.html"
+				})
+				employeeTable.appendChild(tr)
+			})
+		}
+	}
+	function gotoAddDept() {
+		window.location.href = "addDept.html"
+	}
+	function gotoEditDept(dept) {
+		console.log(dept)
+		if (dept._id) {
+			sessionStorage.setItem("department", JSON.stringify(dept))
+			window.location.href = `./editDept.html`
+		}
+		else message()
+	}
+	function goToEmployees() {
+		window.location.href = "./employees.html"
+	}
+
+	function clearTables(type) {
+		const table_container1 = document.querySelector("#myTable")
+		const table_container2 = document.querySelector("#employeeTable")
+		switch (type) {
+			case "all":
+				table_container1.innerHTML = ""
+				table_container2.innerHTML = ""
+				employeeTable_text.innerHTML = ""
+				break
+			case "main":
+				table_container1.innerHTML = ""
+				break
+			case "employee":
+				table_container2.innerHTML = ""
+				break
+			default:
+				break
+		}
+	}
+
+
+
+	function message(num) {
+		switch (num) {
+			case 1: // no shifts found  - shift table is empty
+				msg.innerHTML = "No Employess Found in this Department"
+				alert_msg.appendChild(msg)
+				break
+			case 2:
+				msg.innerHTML = "Added"
+				alert_msg.appendChild(msg)
+				break
+			case 3: //fetch data failed
+				msg.innerHTML = "Fetch data faild "
+				alert_msg.appendChild(msg)
+				break
+			case 4://fetch data Succeeded
+				msg.innerHTML = "Fetch data Succeeded "
+				alert_msg.appendChild(msg)
+				break
+			case 5://fetch data Succeeded
+				msg.innerHTML = "Data is Invalid and cannot be sent to Edit Departments "
+				alert_msg.appendChild(msg)
+				break
+			case 6://fetch data Succeeded
+				msg.innerHTML = "Department is Empty "
+				alert_msg.appendChild(msg)
+				break
+			default:
+				break
+		}
+		setTimeout(() => {
+			msg.innerHTML = null
+		}, 1000);
+	} 
+</script>
+<!-- Content of the page goes here -->
+
+
+</html>

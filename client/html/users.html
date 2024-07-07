@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<!-- import of axios-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.2.1/axios.min.js"></script>
+	<script src="../utils/actions.js"></script>
+	<link rel="stylesheet" href="../css/general.css">
+	<title>Users</title>
+</head>
+
+
+<body onload="fetchData()">
+
+
+
+	<div class="user-login">
+		<h5 id="userElement"></h5>
+	</div>
+
+	<h1>Users</h1>
+
+	<div class="main">
+		<div class="left-container">
+			<table id="myTable">
+			</table>
+
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./employees.html'})()">Go Back To
+				Employees</button>
+			<button style="width:50%;" id="logout"
+				onclick="(function ret(){window.location.href='./index.html'})()">Logout</button>
+		</div>
+		<div class="right-container">
+
+
+			<div id="alert">
+				<h4 id="msg"> </h4>
+			</div>
+		</div>
+	</div>
+</body>
+
+<script>
+	
+	const url_usersDB = `http://localhost:3000/usersdb`
+	let _token
+	let apiAction
+	let users
+	let data_fetched = false
+	let alert_msg = document.querySelector("#alert")
+	let msg = alert_msg.querySelector('#msg')
+
+
+	async function fetchData() {
+		addToken(); // ensure the token and axios instance are set up
+		({ data: users } = await apiAction.get(url_usersDB));
+		console.log(users);
+
+		if (!users) {
+			data_fetched = false
+			message(3)//data fetch failure
+		}
+		else {
+			message(5)//data_fetched 
+			data_fetched = true
+			createMainTable();
+		}
+	}
+
+
+
+	function addToken() {
+		_token = sessionStorage.getItem("token")
+		apiAction = axios.create({
+			headers: {
+				'Content-Type': 'application/json',
+				'x-access-token': _token
+			}
+		});
+	}
+	
+	function createMainTable() {
+		clearTables("main")
+		const myTable = document.querySelector("#myTable")
+		const headers = document.createElement("tr")
+		headers.setAttribute("style", "background-color: lightskyblue;");
+		headers.innerHTML = `<th>Index</th><th>User Id</th><th>User Name</th><th>Max Actions</th><th>Action Allowed</th>`
+		myTable.appendChild(headers)
+		
+		if (users.length === 0) {
+			let tr = document.createElement("tr")
+			tr.innerHTML =
+					`<td><strong> 1</strong></td>
+				<td><strong> N/A </strong></td>
+				<td><strong> List is Empty</strong></td>
+                    <td>N/A</td>
+                    <td>N/A</td>`
+					myTable.appendChild(tr)
+
+		}else {
+			users.forEach((user, idx) => {
+				let tr = document.createElement("tr")
+				tr.innerHTML =
+					`<td> <i>#${idx + 1}</i></td>
+					<td> ${user.userid}</td>
+                    <td>${user.name}</td>
+                    <td>${user.maxactions}</td>
+                    <td>${user.actionallowed}</td>`
+				myTable.appendChild(tr)
+			})
+		}
+	}
+
+	function clearTables(type) {
+
+		const table_container1 = document.querySelector("#myTable")
+		if (type === "all") {
+			table_container1.innerHTML = ""
+		}
+		if (type === "main") {
+			table_container1.innerHTML = ""
+		}
+	}
+
+	function message(num) {
+		switch (num) {
+			case 1:
+				msg.innerHTML = "Param Problem or Data not fetched successfully Or Department Already Exists"
+				alert_msg.appendChild(msg)
+				break
+			case 2:
+				msg.innerHTML = "The Data Base Is Empty	"
+				alert_msg.appendChild(msg)
+				break
+			case 3:
+				msg.innerHTML = "Data fetch failure"
+				alert_msg.appendChild(msg)
+			case 4:
+				msg.innerHTML = "Data Verfied"
+				alert_msg.appendChild(msg)
+				break
+			case 5:
+				msg.innerHTML = "Data Fetched"
+				alert_msg.appendChild(msg)
+				break
+			default:
+				break
+		}
+		setTimeout(() => {
+			msg.innerHTML = null
+
+		}, 2000);
+	}
+
+
+</script>
+
+
+</html>

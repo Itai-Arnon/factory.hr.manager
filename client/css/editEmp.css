@@ -1,0 +1,29 @@
+.main{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly ;
+
+}
+.left-container{
+      /*flex: 6 */
+    flex-basis:50%;
+    padding: 5px;
+    order: 1;
+}
+.right-container{
+    /*flex: 6 */
+    flex-basis:50%;
+    padding: 5px;
+    order: 2;
+}
+
+td , th , table{
+    text-align: center;
+    border:  2px solid;
+    border-color: blue;
+}
+
+table{
+    border-collapse: collapse;
+}
+/* button interface area */

@@ -1,0 +1,7 @@
+//TODOS: edit dept list of manager
+//TODOS: edit dept who is not registered to a dept
+//TODOS: edit dept update table after update from dropdown
+
+//TODOS: problem with update table
+
+dropdown doensn't enter the update state when inside write  function

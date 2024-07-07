@@ -1,0 +1,50 @@
+.main{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+
+}
+.left-container{
+      /*flex: 6 */
+    flex-basis:50%;
+    padding: 5px;
+    order: 2;
+}
+.right-container{
+    /*flex: 6 */
+    flex-basis:50%;
+    padding: 5px;
+    order: 1;
+}
+
+td , th , table{
+    text-align: center;
+    border:  2px solid;
+    border-color: blue;
+}
+
+table{
+    border-collapse: collapse;
+}
+/* button interface area */
+
+.interface-flex{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.buttons1-flex{
+    flex-basis:10%;
+    padding: 5px;
+}
+
+.text-fields-flex{
+       /*flex: 6 */
+       flex-basis:10%;
+       padding: 5px;
+}
+
+.buttons2-flex{
+    flex-basis:10%;
+    padding: 5px;
+}

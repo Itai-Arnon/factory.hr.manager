@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<!-- import of axios-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.2.1/axios.min.js"></script>
+<script src="../utils/actions.js"></script>
+<link rel="stylesheet" href="../css/general.css">
+
+
+<body onload="fetchData()">
+	<div class="user-login">
+		<h5 id="userElement"></h5>
+	</div>
+	<h1>Employees Page</h1>
+
+	<div class="main">
+		<div class="left-container">
+
+			<table id="myTable">
+
+			</table>
+
+			<button style="width:50%;" onclick="fetchData()">Revert Back To Start </button>
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./addEmp.html'})()">New
+				Employee</button>
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./departments.html'})()">Go To
+				Departments</button>
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./users.html'})()">Go To
+				Users</button>
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./shifts.html'})()">Go To
+				Shifts</button>
+			<button style="width:50%;" id="logout"
+				onclick="(function ret(){window.location.href='./index.html'})()">Logout</button>
+			<!-- <button onclick="createfilterByDept()"> Table Filtered By Departent</button> -->
+			<!-- <button onclick="createMainTable()"> Unfiltered Table</button> -->
+			<div id="alert">
+				<h4 id="msg"></h4>
+			</div>
+
+
+		</div>
+		<div class="right-container">
+			<h3>To see which employess belong to which Department use the Dropdown </h3>
+			<div id="select-container">
+				<select id="select">
+				</select>
+				<br /><br />
+			</div>
+		
+		
+			<h2 id="shift-text"> </h2>
+			<table id="myShiftTable">
+			</table>
+
+
+		
+			<!-- buttons here-->
+		</div>
+
+
+
+	</div>
+</body>
+<script>
+
+
+	let alert_msg = document.querySelector("#alert")
+	let msg = alert_msg.querySelector("#msg")
+	let select_container = document.querySelector("#select-container")
+	let dept_select = document.querySelector("#select")
+	let shift_text = document.querySelector("#shift-text")
+	let employee = null
+	let employees
+	let departments = null
+	let data_fetched = null
+	let apiAction
+	let _token
+
+	const url_departments = "http://localhost:3000/departments"
+	const url_employees = "http://localhost:3000/employees"
+	const url_connectors = "http://localhost:3000/employees/shifts/"
+
+
+	async function fetchData() {
+
+		addToken();
+		({ data: employees } = await apiAction.get(url_employees));
+		({ data: departments } = await apiAction.get(url_departments));
+
+		console.log({ info_employees: employees });
+		console.log({ info_departments: departments });
+
+		if (!employees || !departments) {
+			employees = null
+			departments = null
+			message(3);
+		} else {
+			message(4);
+			data_fetched = true
+			clearSelect()
+			createSelect(employees)
+			createMainTable(employees)
+		}
+	}
+
+	function addToken() {
+		_token = sessionStorage.getItem("token");
+		apiAction = axios.create({
+			headers: {
+				'Content-Type': 'application/json',
+				'x-access-token': _token
+			}
+		});
+	}
+
+	async function createSelect(employees) {
+
+		let option
+		if (data_fetched) {
+			dept_select.addEventListener("change", (event) => {
+				prepMainTable(event.target.value, employees)
+			})
+			const startopt = document.createElement("option")
+			startopt.innerHTML = "Please select a department"
+			startopt.value = undefined
+			startopt.selected = "selected"
+			dept_select.appendChild(startopt)
+
+			option = document.createElement("option")
+			option.innerHTML = "All Employees"
+			option.value = 0
+			dept_select.appendChild(option)
+
+			departments.forEach((dept, idx) => {
+				option = document.createElement("option")
+				option.value = dept._id
+				option.innerHTML = dept.name
+				dept_select.appendChild(option)
+			})
+			select_container.appendChild(dept_select)
+		}
+		else
+			message(3)
+	}
+//this function has several functions:
+//1. display all employees in the main table
+//2. enable going to editDept and EditEmp  details being autofilled
+//3. show the shift of each employee
+//4. with the help of the dropdown shows which specific dept employee belongs to
+	function createMainTable(employees) {
+		clearTables("main")
+		let dept = null;
+		const myTable = document.querySelector("#myTable")
+		const headers = document.createElement("tr")
+		headers.innerHTML = `<th>Number</th><th>Name</th><th>Year Joined</th><th>Department</th><th>Shifts</th>`
+		myTable.appendChild(headers)
+
+
+		employees.forEach((elem, idx) => {
+			dept = departments.find(d => String(d._id) === elem.deptId)
+			employee = elem
+			if (!dept) dept = { name: "unassigned" }
+			let tr = document.createElement("tr")
+			tr.innerHTML =
+				`<td> <strong>${idx + 1}</strong></td>
+				<td id="emp-button"><strong> ${elem.firstname} ${elem.lastname}</strong></td>
+                    <td> ${elem.yearjoined}</td>
+                    <td id="dept-button" classname="d">${dept.name}</td>
+                    <td><button id="shift-button">Shifts</button></td>`
+
+			const emp_button = tr.querySelector("#emp-button")
+			emp_button.setAttribute("style", "font-style:italic;")
+			emp_button.addEventListener("click", action1 = () => {
+				gotoEditEmployee(elem)
+				console.log({ info: "pressed" })
+			})
+			
+			const dept_button = tr.querySelector("#dept-button")
+			dept_button.setAttribute("style", "font-style:italic;")
+			dept_button.addEventListener("click", action2 = () => {
+				gotoEditDept(dept) 
+				console.log({ info: event.target.tagName })
+			})
+
+			const shift_button = tr.querySelector("#shift-button")
+			shift_button.setAttribute("style", "background: lightskyblue; font-style:italic;")
+			shift_button.addEventListener("click", action3 = () => {
+				clearTables("shifts")
+				shiftTablePrep(elem)
+			})
+
+			myTable.appendChild(tr)
+
+		});
+	}
+
+	function prepMainTable(deptId, employees) {
+		if (data_fetched) {
+			if (deptId === "0") {
+				createMainTable(employees)
+				console.log({ info: event.target.value })
+			}
+			else {
+				const filtered_employees = employees.filter(emp => emp.deptId === deptId)
+				createMainTable(filtered_employees)
+			}
+		}
+		else
+			message(3)
+
+	}
+
+
+	async function shiftTablePrep(elem) {
+
+		const { data: shifts = [] } = await apiAction.get(`${url_employees}/shifts/${elem._id}`)
+		console.log({ infoshifts: shifts })
+		if (shifts) {
+			createShiftsTable(shifts)
+			shift_text.innerHTML = `Shifts Table For  ${elem.firstname} ${elem.lastname}:`
+		}
+		else message(3)//failed to fetch data
+	}
+
+	function createShiftsTable(shifts) {
+		clearTables("shifts")
+		const myShiftTable = document.querySelector("#myShiftTable")
+		const headers = document.createElement("tr")
+		headers.innerHTML = `<th>No.</th><th>Date</th><th>Start Time</th><th>End Time</th>`
+		myShiftTable.appendChild(headers)
+
+		if (shifts.length === 0) {
+			let tr = document.createElement("tr")
+			obj = { date: "No Shifts", startTime: "N/A", endTime: "N/A" }
+			shifts.push(obj);
+			tr.innerHTML = `<td> 1</td><td>${obj.date}</td><td>${obj.startTime}</td><td>${obj.endTime}</td><td></td>`
+			myShiftTable.appendChild(tr)
+		}
+		else {
+			shifts.forEach((e, idx) => {
+				let tr = document.createElement("tr")
+				tr.innerHTML =
+					`<td>${idx + 1}</td>	
+					<td> ${e.date}</td>
+					<td> ${e.startTime}</td>
+					<td> ${e.endTime}</td>`
+
+				myShiftTable.appendChild(tr)
+			})
+		}
+	}
+	function gotoAddDept() {
+
+		window.location.href = "addDept.html"
+
+	}
+	function gotoEditDept(dept) {
+		if (dept._id) {
+			sessionStorage.setItem('department', JSON.stringify(dept))
+			window.location.href = './editDept.html'
+		}
+		else
+			message(5)
+	}
+
+	function gotoEditEmployee(elem) {
+		if (elem._id) {
+		sessionStorage.setItem('employee', JSON.stringify(elem))
+		window.location.href = './editEmp.html'
+		}else
+			message(5)
+	}
+
+	function clearTables(type) {
+
+		const table_container1 = document.querySelector("#myTable")
+		const table_container2 = document.querySelector("#myShiftTable")
+		if (type === "all") {
+			table_container1.innerHTML = ""
+			table_container2.innerHTML = ""
+		}
+		if (type === "main") {
+			table_container1.innerHTML = ""
+		}
+		if (type === "shifts") {
+			table_container2.innerHTML = ""
+		}
+	}
+
+	function clearSelect() {
+		select_container.innerHTML = ""
+		dept_select.innerHTML = ""
+	}
+
+
+
+	function message(num) {
+		switch (num) {
+			case 1: // no shifts found  - shift table is empty
+				msg.innerHTML = "No Shifts Found"
+				alert_msg.appendChild(msg)
+				break
+			case 2:
+				msg.innerHTML = "Added"
+				alert_msg.appendChild(msg)
+				break
+			case 3: //fetch data failed
+				msg.innerHTML = "Fetch data faild "
+				alert_msg.appendChild(msg)
+				break
+			case 4://fetch data Succeeded
+				msg.innerHTML = "Fetch data Succeeded "
+				alert_msg.appendChild(msg)
+				break
+			case 4://gotoEditDepartment	
+				msg.innerHTML = "Department Unassigned"
+				alert_msg.appendChild(msg)
+			default:
+				break
+		}
+		setTimeout(() => {
+			msg.innerHTML = null
+		}, 1000);
+	}
+</script>
+
+</html>

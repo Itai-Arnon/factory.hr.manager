@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<!-- import of axios-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.2.1/axios.min.js"></script>
+	<script src="../utils/actions.js"></script>
+
+	<link rel="stylesheet" href="../css/editEmp.css">
+	<title>Employee Editor</title>
+</head>
+
+<body onload="init()">
+	<div class="user-login">
+		<h5 id="userElement"></h5>
+	</div>
+	<h1 class="head1">Employee Editor</h1>
+	<!-- text boxes shift tables -->
+	<div class="main">
+		<div class="left-container">
+
+			<h4>Before Performing Any Action Verify Employee First By Pressing <strong>Submit</strong></h4>
+			Name:<select id="emp-dropdown" style="width:70%;"></select>
+
+			<input type="hidden" id="current-name" size="30" /> <br>
+			<input type="hidden" id="current-emp-id">
+			<input type="hidden" id="current-emp-name">
+
+			<button style="width:50%;" class="no-pressbutton" name="enter-name">Submit</button> <br><br>
+			<div class="replyText"></div>
+			<h5 id="btn-2"></h5>
+			<!---function 0-->
+
+
+
+			<h2 class="instruction"> In Order to update Fill in all the parameters</h2>
+			First Name: <input type="text" id="firstname" size="30" /> <br>
+			LastName: <input type="text" id="lastname" size="30" /> <br>
+			Year Joined:<input type="text" id="yearjoined" size="30" /> <br>
+			Department Name: <select id="dropdown" style="width:38%;">
+				<option value="">Select a Department</option>
+			</select><br />
+
+			<input type="hidden" id="deptId" size="30" /><br>
+			<input type="hidden" id="update-id"> <!---store emp id-->
+			<button style="width:50%;" name="updateEmp" class="btn" size="40">Update Employee"s Details</button>
+			<!---function 1-->
+
+
+
+			<h2 class="instruction">Fill in the following box in order to delete the Employee </h2>
+			Name: <input type="text" id="delete-name" size="40" /> <br>
+			<input type="hidden" id="delete-id">
+			<button style="width:50%;" name="deleteEmp" class="btn">Delete Employee</button> <!---function 2-->
+
+
+		</div> <!-- end left container -->
+
+		<!-- shift table -->
+
+		<div class="right-container">
+			<!-- add invisibility here-->
+			<h3 id="table-text"></h3>
+			<div id="table-container"></div><br style="line-height:3em">
+
+			<button style="width:50%;" name="showShifts" class="btn">Show Employees Shifts</button>
+			<button style="width:50%;" class="btn">Display Non Registered Shifts</button> <br> <!---function 3-->
+			<button style="width:50%;" onclick="clearTables()" class="btn" size="40" name="clearTables">Clear All
+				Tables</button>
+			<!---function 4-->
+			<button style="width:50%;" onclick="clearText()" class="btn" size="40" name="clearText">Clear All Text
+				Fields</button><!---function 5-->
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./employees.html'})()">Go Back To
+				Employees</button>
+			<button style="width:50%;" id="logout"
+				onclick="(function ret(){window.location.href='./index.html'})()">Logout</button>
+			<div id="alert">
+				<h4 id="msg"> </h4>
+			</div>
+
+			<h2 id="message"> </h2>
+
+		</div>
+
+
+
+
+		<!-- at some point add messages-->
+	</div>
+</body>
+
+<script>
+
+	 
+
+	let isEmployeeValid = false
+	let counter = 0
+	let alert_msg = document.querySelector("#alert")
+	let msg = alert_msg.querySelector("#msg")
+	let table_text = document.querySelector("#table-text");
+	let dept_select = document.getElementById('dropdown');
+	let emp_select = document.querySelector("#emp-dropdown");
+	let employee = null
+	let current_id = null
+	let current_firstname = null
+	let sentEmployee
+	let apiAction
+	let _token
+	let default_dept_id = null
+	let _insertSession = true //ensure session object is injected only once
+	let employees = null
+	let departments = null
+	let connectors = null
+	let shift = null
+
+
+	const url_connectors = `http://localhost:3000/connectors`
+	const url_shifts = `http://localhost:3000/shifts`
+	const url_employees = `http://localhost:3000/employees`
+	const url_departments = `http://localhost:3000/departments`
+
+
+	async function fetchData() {
+		
+		( { data: employees } = await apiAction.get(url_employees));
+		( { data: departments } = await apiAction.get(url_departments));
+		 ({ data: connectors } = await apiAction.get(url_connectors));
+		 ({ data: shifts } = await apiAction.get(url_shifts));
+
+
+
+	}
+
+
+	async function init() {
+		addToken();
+		 ({ data: employees } = await apiAction.get(url_employees));
+		 ({ data: departments } = await apiAction.get(url_departments));
+		 ({ data: connectors } = await apiAction.get(url_connectors));
+		 ({ data: shifts } = await apiAction.get(url_shifts));
+		
+		if (!employees || !departments || !connectors || !shifts) message(8)
+		else {
+			fillDeptDropdown()
+			fillEmployeeDropdown()
+			sentEmployee = JSON.parse(sessionStorage.getItem('employee'))
+			console.log({ emp_info: sentEmployee })
+			if (sentEmployee && _insertSession === true) { //insures sendEmployee is inserted once
+				console.log({ emp_info: _insertSession });
+				setDetails(sentEmployee)
+				isEmployee()
+				_insertSession = false//session object will not be inserted
+			}
+
+
+			//non pointer function 
+			const input_name = document.querySelector(".no-pressbutton")
+			input_name.addEventListener("click", isEmployee)
+
+			//pointer  functions assignments
+			const list = document.querySelectorAll(".btn")
+			console.log({ info_list: list })
+			list.forEach(async (e, idx) => {
+				e.addEventListener("click", driver = async () => {
+					e.setAttribute("id", idx)
+					let funcId = idx
+					await divideIntoFunctions(funcId)
+				})
+			})
+		}
+	}
+	//function inserts the token to every method in the api
+	function addToken() {
+		_token = sessionStorage.getItem("token")
+
+		apiAction = axios.create({
+			headers: {
+				'Content-Type': 'application/json',
+				'x-access-token': _token
+			}
+		});
+	}
+
+
+	async function isEmployee() {
+		let emp = null
+
+		if (counter >= 3)
+			alert("You have entered an invalid name 3 times, please refresh the page")
+		else {
+			employee = emp_select.value
+
+			emp = employees.find(e => String(e._id) === employee)
+			if (!emp) {
+				counter++
+				isEmployeeValid = false
+				employee = null
+				clearTables()
+				clearText()
+				message(0)
+			} else {
+				isEmployeeValid = true
+				counter = 0
+				current_id = emp._id
+				current_firstname = emp.firstname
+				console.log(current_id)
+				clearTables()
+				setDetails(emp)
+				message(1)
+			}
+		}
+	}
+
+	function setDetails(_emp) {
+		emp_select.value = _emp._id
+		let dept = departments.find(dept => String(dept._id) === _emp.deptId);
+		dept_select.value = (dept) ? dept._id : 0
+
+		document.getElementById("current-emp-id").value = _emp._id
+		document.getElementById("current-name").value = _emp.firstname
+		document.getElementById("firstname").value = _emp.firstname
+		document.getElementById("lastname").value = _emp.lastname
+		document.getElementById("yearjoined").value = _emp.yearjoined
+		dept_select.value = _emp.deptId
+		document.getElementById("delete-name").value = `${_emp.firstname} ${_emp.lastname}`
+		default_dept_id = _emp.deptId
+
+	}
+
+	function fillDeptDropdown() {
+		dept_select.innerHTML = "Departments"; // clear existing options
+		option = document.createElement('option'); // clear existing options
+		option.value = 0
+		option.text = "Pick a Department"
+		dept_select.appendChild(option);
+
+		if (departments) {
+			departments.forEach(function (dept) {
+				let option = document.createElement('option');
+				option.value = `${dept._id}`;
+				option.text = `${dept.name}`;
+				if (default_dept_id === dept._id) {
+					option.selected = true
+				}
+				dept_select.appendChild(option);
+			});
+			default_dept_id = null
+		}
+	}
+
+	function fillEmployeeDropdown() {
+		// Clear existing options
+		emp_select.innerHTML = "";
+
+		// Create default option
+		let defaultOption = document.createElement('option');
+		defaultOption.value = 0;
+		defaultOption.text = "Pick an Employee";
+		emp_select.appendChild(defaultOption);
+		//only in case there are employees
+
+		if (employees) {
+			// Create options for each employee
+			employees.forEach(function (employee, idx) {
+				let option = document.createElement('option');
+				option.value = employee._id;
+				option.text = `${employee.firstname} ${employee.lastname}`;
+
+				// Set the second option as selected
+				if (idx === 1) {
+					option.selected = true;
+				}
+
+				emp_select.appendChild(option);
+			});
+		}
+	}
+
+
+	async function divideIntoFunctions(funcId) {
+		console.log({ func_info: funcId })
+		const arrPtr =
+			[{ "function": updateEmp, valid: false },//0
+			{ "function": deleteEmp, valid: false },//1
+			{ "function": showTakenShifts, valid: true }, //2
+			{ "function": showFreeShifts, valid: true }, //4 
+			{ "function": clearTables, valid: false },//5 no need for valid employee
+			{ "function": clearText, valid: false }//6 no need for valid employee
+			]
+		if (isEmployeeValid === true) {// all functions are allowed
+			if (funcId === 4 || funcId === 5) //function that don"t need the employee name var 
+				arrPtr[funcId].function()
+
+			await arrPtr[funcId].function() // all functions are allowed
+		} else { //all cases of invalid emp
+			if (arrPtr[funcId].valid === false) //update and delete
+				arrPtr[funcId].function(null)
+			else { // showTakenShifts and showFreeShifts when employee not verified
+				message(2)
+				console.log({ isEmployeeValid_info: isEmployeeValid });
+			}
+		}
+	}
+
+
+
+
+
+	//prepare data of all shifts that belong to the employee
+	async function showTakenShifts() {
+		clearTables()
+
+
+		const emp = employees.find(e => e.firstname === current_firstname)
+		console.log({ emp_info: emp });
+
+		if (!emp) message(3)
+		else {
+			//brings out all registered shifts 
+			const url_shifts_connected = `http://localhost:3000/employees/shifts/${String(emp._id)}`
+			const { data: shifts } = await apiAction.get(url_shifts_connected);
+			if (!shifts || shifts.length == 0 ) message(12)
+			else {
+				table_text.innerHTML = `Employee Registered To These Shifts`
+				createTakenShiftsTable(shifts)
+			}
+		}
+	}
+
+
+
+
+
+	/*Table construction*/
+	//the table divides between time there are no shifts and time there are shifts
+	async function createTakenShiftsTable(shifts) {
+		clearTables()
+		const table_container = document.querySelector("#table-container")
+		const table = document.createElement("table")
+		table.setAttribute("id", "table")
+		const headers = document.createElement("tr")
+		headers.innerHTML = `<th>No.</th><th>Date</th><th>Start Time</th><th>End Time</th><th>Leave Shift</th>`
+		table.appendChild(headers)
+
+		//case no shifts we will  create a table with one empty item
+		if (shifts == [] || shifts.length === 0) {
+			obj = { date: "No Shifts", startTime: "N/A", endTime: "N/A" }
+			shifts.push(obj);
+			const tr = document.createElement("tr")
+			tr.innerHTML = `<td> - </td><td>${obj.date}</td><td>${obj.startTime}</td><td>${obj.endTime}</td><td>None Relevant</td>`
+			table.appendChild(tr)
+
+		} else {
+			table.setAttribute("id", "table")
+			shifts.forEach(async function (e, idx) {
+				const tr = document.createElement("tr")
+				tr.innerHTML = `<td>${idx + 1}</td><td>${e.date}</td><td>${e.startTime}</td><td>${e.endTime}</td><td><button id="leave">Leave</button></td>`
+				const leave = tr.querySelector("#leave")
+				console.log({ info_leave: leave });
+				leave.setAttribute("style", "font-color:lightblue")
+				leave.addEventListener("click", register = () => {
+					const desired = e
+					unregisterShift(desired)
+					clearTables
+					showTakenShifts()
+				})
+				table.appendChild(tr)
+			})
+		}
+		table_container.appendChild(table)
+	}
+
+
+	async function showFreeShifts() {
+		clearTables()
+		let non_registered_shifts;
+		await fetchData();
+
+		table_text.innerHTML =
+			`Non Registered Shifts: The Employee Can Register <br> To These, by pressing the Button`
+
+
+		const connectors_filtered = connectors.filter(c => c.employeeid === `${current_id}`)
+
+		//if there are no connected shifts for the employee
+		if (!connectors_filtered || connectors_filtered.length === 0) {
+			createFreeShiftsTable(shifts)
+		}
+		else {
+			//filter out all shifts that share belong to the specific id 
+			connectors_filtered.forEach(c => {
+				let idx = shifts.findIndex(elem => elem._id === c.shiftid)
+				if (idx !== -1) {
+					shifts.splice(idx, 1)//removal by index
+				}
+			})
+			createFreeShiftsTable(shifts)
+		}
+
+	}
+
+	async function createFreeShiftsTable(shifts) {
+		clearTables()
+		console.log({ infosh: shifts })
+		message(8);
+
+		const table_container = document.querySelector("#table-container")
+		const table = document.createElement("table")
+		const headers = document.createElement("tr")
+		headers.innerHTML = `<th>No.</th><th>Date</th><th>Start Time</th><th>End Time</th><th>Press To Register</th>`
+		table.appendChild(headers)
+
+		//case no shifts will create a table with one empty item
+		if (shifts == [] || shifts.length === 0) {
+			table.setAttribute("id", "table")
+			obj = { date: "No Shifts", startTime: "N/A", endTime: "N/A" }
+			shifts.push(obj);
+			const tr = document.createElement("tr")
+			tr.innerHTML = `<td> 1</td><td>${e.date}</td><td>${e.startTime}</td><td>${e.endTime}
+				</td><strong id="reg" >Non Applicable<strong></td>`
+			table.appendChild(tr)
+		}
+		else {//case  shifts 
+			shifts.forEach(async function (e, idx) {
+				const tr = document.createElement("tr")
+				tr.innerHTML = `<td>${idx + 1}</td><td>${e.date}</td><td>${e.startTime}</td>
+				<td>${e.endTime}</td><td>
+          			<button id="reg">Register</button></td>`
+				const button = tr.querySelector("#reg")
+				tr.setAttribute("id", String(e._id))
+				button.setAttribute("style", "font-color: lightblue;")
+				button.addEventListener("click", register = () => {
+					const desired = e
+					WriteToTable(desired)
+					clearTables()
+					showFreeShifts()
+				})
+				table.appendChild(tr)
+			})
+		}
+		table_container.appendChild(table)
+	}
+
+	async function WriteToTable(desired) {
+		let result
+		const emp = employees.find(e => e.firstname === current_firstname)
+		if (desired && emp) {  //validated the given values
+			const postData = { employeeid: String(emp._id), shiftid: String(desired._id) }
+			console.log(!isDupllicant(postData))
+			if (!isDupllicant(postData)) { //prevents registration to the same shift
+				 result = await apiAction.post(url_connectors, postData)
+				console.log({status:result.status})
+				clearTables()
+				showFreeShifts()
+				console.log({ info_result: result })
+				message(10)
+			}
+			else message(13)//duplicate data
+		}
+		else message(5)//bad params
+	}
+
+	//unregisters employess from a shift
+	async function unregisterShift(desired) {
+		let result
+		if (current_id && connectors.length > 0) {
+			const connector = connectors.find(c => c.employeeid === current_id && c.shiftid === desired._id)
+			if (connector) {
+				result = await apiAction.delete(`http://localhost:3000/connectors/${connector._id}`)
+				clearTables()
+				showTakenShifts()
+
+				console.log(result)
+				message(14)//shift removed
+			}
+			else
+				message(5)
+		}
+	}
+
+
+	function isDupllicant(postData) { // check if a connector with same credentials exists 
+		const shiftExist = connectors.find(c => (c.shiftid === postData.shiftid) && (c.employeeid === postData.employeeid));
+		if (shiftExist) {
+			message(7)
+			return true
+		}
+		return false
+	}
+
+
+	async function updateEmp() {
+
+		let resp
+		const url_update_employees = `http://localhost:3000/employees/${current_id}`
+
+		const firstname = document.getElementById("firstname").value
+		const lastname = document.getElementById("lastname").value
+		const yearjoined = document.getElementById("yearjoined").value
+		const deptId = dept_select.value
+		console.log({ info_dept_VVVV: deptId });
+		if (!firstname || !lastname || !yearjoined || !deptId) message(9)
+		else {
+			resp = await apiAction.put(url_update_employees, {
+				firstname,
+				lastname,
+				yearjoined,
+				deptId
+			});
+			clearTables()
+			showTakenShifts()
+			message(10)
+		}
+	}
+
+	async function deleteEmp() {
+		let resp
+		if (current_id !== null) {
+			const url_delete_employees = `${url_employees}/${current_id}`
+			resp = await apiAction.delete(url_delete_employees);
+			console.log({ info_response: resp });
+			displayHTTPResult(JSON.stringify(resp))
+			message(11)//data is written
+			location.reload()
+			// clearTables()
+			// clearText()
+			// fillEmployeeDropdown()
+
+		}
+		else message(7) //employee is invalid
+	}
+
+	async function clearTables() {
+		const table_container = document.querySelector("#table-container")
+		table_container.innerHTML = ""
+	}
+
+	async function clearText() {
+		const listText = document.querySelectorAll("input")
+		listText.forEach(txt => txt.value = null)
+		table_text = null;
+		emp_select.value = 0
+		dept_select.value = 0
+		sessionStorage.removeItem('employee');
+	}
+
+	function message(num) {
+		switch (num) {
+			case 0: // unverrified name isEmployee
+				msg.innerHTML = "Invalid Name"
+				alert_msg.appendChild(msg)
+				break;
+			case 1: // verrified name isEmployee
+				msg.innerHTML = "Verified"
+				alert_msg.appendChild(msg)
+				break;
+			case 2://bad parameters
+				msg.innerHTML = "Invalid Employee"
+				alert_msg.appendChild(msg)
+				break;
+			case 3://data added on table 
+				msg.innerHTML = "Employee Invalid"
+				alert_msg.appendChild(msg)
+				break;
+			case 4://data edit Employee param mistake 
+				msg.innerHTML = "Employee is Already Registered to all shifts"
+				alert_msg.appendChild(msg)
+				break;
+			case 5: // writeToTable func - bad params
+				msg.innerHTML = "Bad Parmas"
+				alert_msg.appendChild(msg)
+				break;
+			case 6: //delete employee - does current_id exists 
+				msg.innerHTML = "No Free Shifts"
+				alert_msg.appendChild(msg)
+				break;
+			case 7: //data added on table 
+				msg.innerHTML = "Employee Id is Invalid"
+				alert_msg.appendChild(msg)
+				break;
+			case 8: //createFreeShiftsTable
+				msg.innerHTML = "No Data Found"
+				alert_msg.appendChild(msg)
+				break;
+			case 9://update
+				msg.innerHTML = "Bad Params"
+				alert_msg.appendChild(msg)
+				break;
+			case 10: //writeToTable and updateEmp 
+				msg.innerHTML = "Data Written"
+				alert_msg.appendChild(msg)
+				break;
+			case 11: //delete 
+				msg.innerHTML = "Data Written"
+				alert_msg.appendChild(msg)
+			case 12:// data failure
+				msg.innerHTML = "Failed to Fetch Data"
+				alert_msg.appendChild(msg)
+				break;
+			case 13:// data failure
+				msg.innerHTML = "Duplicate Data"
+				alert_msg.appendChild(msg)
+				break;
+			case 14:// data failure
+				msg.innerHTML = "Shift Removed"
+				alert_msg.appendChild(msg)
+				break;
+		}
+		setTimeout(() => {
+			msg.innerHTML = null
+		}, 3000);
+	}
+
+	function displayHTTPResult(message) {
+		// Get the HTML element
+		var msgElement = document.getElementById("message");
+
+		// Set the message
+		msgElement.innerHTML = message;
+
+		// Clear the message after 2000 milliseconds
+		setTimeout(() => {
+			msgElement.innerHTML = null;
+		}, 2000);
+	}
+
+
+</script>
+
+</html>

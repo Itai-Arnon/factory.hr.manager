@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<!-- Import of axios library for making HTTP requests -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.2.1/axios.min.js"></script>
+	<!-- Import of custom JavaScript actions -->
+	<script src="../utils/actions.js"></script>
+	<!-- Import of custom CSS for styling -->
+	<link rel="stylesheet" href="../css/addDept.css">
+	<title>New Department</title>
+</head>
+
+<body onload="fetchData()">
+	<!-- User login section -->
+	<div class="user-login">
+		<h5 id="userElement"></h5>
+	</div>
+	<!-- Main container for the form and buttons -->
+	<div class="main">
+		<div class="left-container">
+			<h1>Add Department</h1>
+			<h4>Fill The Text Boxes Making Sure all Details Are Correct</h4>
+			<!-- Input for department name -->
+			Name: <input type="text" id="name" size="30" /> <br>
+			<!-- Dropdown for selecting manager name -->
+			Manager Name: <select id="dropdown" style="width:50%;"></select><br/>
+			<!-- Button to add department -->
+			<button style="width:50%;" onclick="addDept()">Add Department</button>
+			<!-- Button to clear text boxes -->
+			<button style="width:50%;" onclick="clearTables()">Clear Text Boxes</button>
+			<!-- Button to go back to departments page -->
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./departments.html'})()">Go Back To Departments</button><br>
+			<!-- Button to logout -->
+			<button style="width:50%;" id="logout" onclick="(function ret(){window.location.href='./index.html'})()">Logout</button>
+			<!-- Alert message container -->
+			<div id="alert">
+				<h4 id="msg"></h4>
+			</div>
+		</div>
+	</div>
+	<!-- Right container (currently empty) -->
+	<div class="right-container"></div>
+
+</body>
+
+<script>
+	let url_departments = 'http://localhost:3000/departments'
+	let url_employees = 'http://localhost:3000/employees'
+	let alert_msg = document.querySelector("#alert")
+	let msg = alert_msg.querySelector('#msg')
+	let departments//global resource variables
+	let employees
+	let data_fetched = false
+	let apiAction // axios instance 
+
+    //fetch data from the server
+	async function fetchData() {
+		addToken();
+		({ data: departments  } = await apiAction.get(url_departments));
+		({ data: employees  } = await apiAction.get(url_employees));
+		console.log({ departments, employees });
+
+
+        //verfication that data has been fetched
+		if (!departments || !employees) {
+			message(6)
+			data_fetched = false
+		}
+		else {
+			message(5)
+			data_fetched = true
+			fillDropdown()
+		}
+	}
+
+	function addToken() {
+		_token = sessionStorage.getItem("token")
+ // axios instance  to ensure token is always inserted
+		apiAction = axios.create({
+			headers: {
+				'Content-Type': 'application/json',
+				'x-access-token': _token
+			}
+		});
+	}
+// Function to fill the dropdown with employee names
+	function fillDropdown() {
+		
+		let select = document.getElementById('dropdown');
+		select.innerHTML = "Managers"; // clear existing options
+		const option  = document.createElement('option');
+		 option.innerHTML = `Select a Manager`
+		 option.selected = true; 
+		 select.appendChild(option);
+		employees.forEach((emp) => {
+			let option = document.createElement('option');
+			
+			option.value = emp._id 
+			option.text = `${emp.firstname} ${emp.lastname}`
+			select.appendChild(option);
+		});
+	}
+	
+	function getRandomNumber(upperBound) {
+    return Math.floor(Math.random() * upperBound);
+}
+	//registes to department
+	async function addDept() {
+		const name = document.querySelector("#name").value
+		const selectElement = document.getElementById('dropdown');
+		const managerId = selectElement.value
+		console.log(name, managerId);
+		let result
+		if (!validate(name, managerId) || data_fetched === false || isDupllicant(name, managerId)) {
+			console.log(managerId, name);
+			clearTables()
+			message(1)
+		}
+		else {
+			console.log(name, managerId);
+			
+			const postData = {
+				name,
+				managerId
+			}
+			const resp = await fetch(url_departments, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'x-access-token': _token
+				},
+				body: JSON.stringify(postData)
+			})
+			//translation back to js object
+            result = await resp.json()
+			console.log({ info: result })
+			message(2)
+			message_res(JSON.parse(result))
+
+		}
+	}
+    //validate parameters are legal
+	function validate(name, managerId) {
+
+		const managerValid = employees.find(emp => String(emp._id) === managerId);
+		if (!managerValid || name === null) {
+			message(3) // manager or name invalid
+			console.log({ info: " inside validate failed" });
+
+			return false
+		}
+		message(4)// name valid
+		return true
+	}
+
+  //validate new object is not duplicant
+	function isDupllicant(name, managerId) {
+		const manV = employees.find(emp => String(emp._id) === managerId);
+		if (!manV) return false
+		const dup = departments.find(d => d.name === name)
+		message(7)
+		return (dup) ? true : false
+	}
+
+//post the result of the server update
+	function message_res(result) {
+		msg.innerHTML = { info: result }
+		setTimeout(() => {
+			msg.innerHTML = null
+
+		}, 1000);
+
+	}
+//messaging system notifying the various errors and updates
+	function message(num) {
+		switch (num) {
+			case 1:
+				msg.innerHTML = "Param Problem or Data not fetched successfully Or Department Already Exists"
+				alert_msg.appendChild(msg)
+				break
+			case 2:
+				msg.innerHTML = "Added Successfully"
+				alert_msg.appendChild(msg)
+				break
+			case 3:
+				msg.innerHTML = "Manager not found or Depatment Name invalid"
+				alert_msg.appendChild(msg)
+			case 4:
+				msg.innerHTML = "Data Verfied"
+				alert_msg.appendChild(msg)
+				break
+			case 5:
+				msg.innerHTML = "Data Fetched"
+				alert_msg.appendChild(msg)
+				break
+			case 6:
+				msg.innerHTML = "Data fetch failure"
+				alert_msg.appendChild(msg)
+				break
+			case 7:
+				msg.innerHTML = "Department Already Exists"
+				alert_msg.appendChild(msg)
+				break
+			default:
+				break
+		}
+		setTimeout(() => {
+			msg.innerHTML = null
+
+		}, 1500);
+	}
+
+//clears tables and aids conintual use
+	async function clearTables() {
+		const clear_list = document.querySelectorAll('input')
+		console.log({ data: clear_list });
+		clear_list.forEach(elem => {
+			elem.value = null
+		})
+	}
+
+
+</script>
+
+
+
+</html>

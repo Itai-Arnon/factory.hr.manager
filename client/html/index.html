@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.2.1/axios.min.js"></script>
+	<script src="../utils/actions.js"></script>
+
+
+	<link rel="stylesheet" href="../css/general.css">
+	<title>Login Page</title>
+</head>
+
+<body onload="fetchData()">
+	<div class="main">
+		<div class="left-container">
+			<div class="user-login">
+				<h5 id="userElement"></h5>
+			</div>
+			<h2>Login</h2>
+
+			Username:<input style="width:70%;" type="text" id="username"> <br>
+			Email: <input style="width:70%;" type="text" id="email"> <br>
+			<button style="width:70%;" onclick="isValid()">Login</button> `
+
+			<button style="width:70%;" onclick="clearTextBoxes()">Clear Tables</button>
+			<button style="width:70%;" onclick="(function ret(){window.location.href='./employees.html'})()">Add
+				Departments</button><br>
+		</div>
+
+		<div class="right-container">
+			<div id="alert">
+				<h4 id="msg"> </h4>
+				<!-- staying empty in the meantime-->
+			</div>
+		</div>
+	</div>
+</body>
+
+<script>
+	const url_login = 'http://localhost:3000/auth/login'
+	const url_users = `https://jsonplaceholder.typicode.com/users`
+	let alert_msg = document.querySelector("#alert")
+	let msg = alert_msg.querySelector('#msg')
+	let users
+	let username
+	let email
+	let isUserValid = false
+	let counter = 0
+	let current_user_name           
+	let current_user_email
+
+	async function fetchData() {
+		({ data: users } = await axios.get(url_users));
+		if (users.length === 0) message(5)
+
+		else message(4)
+	}
+
+	async function isValid() {
+
+		if (counter >= 3)
+			alert("You have entered an invalid name 3 times, please refresh the page")
+		else {
+			username = document.getElementById('username').value
+			email = document.getElementById('email').value
+
+			let user = users.find(user => (user.name === username) && (user.email === email));
+			console.log({ info_user: user });
+			if (!user) {
+				counter++
+				isUserValid = false
+				user = null
+				message(2)
+				clearTextBoxes()
+			} else {
+				counter = 0
+				current_user_name = user.name
+				current_user_email = user.email
+				// setDetails(dept)//inster the details of the dept into the textboxes
+				isUserValid = true
+				message(3)// user found and verified 
+
+				await Login(user) //move on to authenticate
+			}
+		}
+	}
+
+	async function Login(user) {
+		// message 6 - unsuccessful login
+		//message 7 - successful login
+		let result;
+		let loginData =
+		 { name: user.name, 
+			email: user.email };
+		
+		({data:result} = await axios.post(url_login, loginData));
+
+		if (!result) message(5)
+		else {
+			const { token, name, id } = result;
+			if (token) {
+				//console.log(token);
+				sessionStorage.setItem("token", token);
+				sessionStorage.setItem("id", id);
+			    setSessionUserName(name)
+				window.location.href = './employees.html';
+			}
+			else message(1)
+
+		}
+	}
+
+	 function setSessionUserName(name) {
+		//console.log({ user_name: name });
+		sessionStorage.setItem("name", JSON.stringify(name))
+
+
+
+	}
+
+	async function clearTextBoxes() {
+		const clear_list = document.querySelectorAll('input')
+		console.log({ data: clear_list });
+		clear_list.forEach(elem => {
+			elem.value = null
+		})
+	}
+
+	function message(num) {
+		switch (num) {
+			case 1:
+				msg.innerHTML = "Text Entered Empty or Illegal"
+				alert_msg.appendChild(msg)
+				break
+			case 2:
+				msg.innerHTML = "User not found"
+				alert_msg.appendChild(msg)
+				break
+			case 3:
+				msg.innerHTML = "User found and Verfied"
+				alert_msg.appendChild(msg)
+				break
+			case 4:
+				msg.innerHTML = "Data Fetched"
+				alert_msg.appendChild(msg)
+				break
+			case 5:
+				msg.innerHTML = "Data fetch failure, Check Connection"
+				alert_msg.appendChild(msg)
+				break
+			case 6:
+				msg.innerHTML = "Authentication Failure"
+				alert_msg.appendChild(msg)
+				break
+			case 7:
+				msg.innerHTML = "Authentication Succesful"
+				alert_msg.appendChild(msg)
+				break
+			default:
+				break
+		}
+		setTimeout(() => {
+			msg.innerHTML = null
+
+		}, 1500);
+	}
+
+
+
+
+</script>
+
+
+</html>

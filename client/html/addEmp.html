@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<!-- import of axios-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.2.1/axios.min.js"></script>
+	<script src="../utils/actions.js"></script>
+
+	<!--<link rel="stylesheet" href="proj1_style.css">-->
+	<title>New employees</title>
+	<style>
+		.text_boxes {
+			width: 30%;
+			font-size: 1rem;
+			position: absolute;
+			left: 0px;
+
+		}
+
+		input.text_boxes {
+			display: block;
+
+		}
+
+		button.lightbutton {
+			display: block;
+			width: 50%;
+
+		}
+	</style>
+</head>
+
+<body onload="fetchData()">
+	<div class="user-login">
+		<h5 id="userElement"></h5>
+	</div>
+	<h1 class="head1">Add employee</h1>
+
+	<div class="text_boxes">
+		First Name: <input type="text" id="firstname" class="text-fields" /> <br>
+		Last Name: <input type="text" id="lastname" class="text-fields" /> <br>
+		Year Joined: <input type="text" id="yearjoined" class="text-fields" /> <br>
+		Department Name: <select id="dropdown" style="width:38%;">
+			<option value="" selected>Select a Department</option>
+		</select><br />
+		<!-- <input type="text" placeholder="Existent Id Only" id="deptId" class="text-fields" /> -->
+		<span>
+			<button style="width:50%;" onclick="addEmp()" class="lightbutton">Save</button>
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./employees.html'})()">Go Back To
+				Employees</button>
+			<button style="width:50%;" class="lightbutton" onclick="clearTables()">Clear Tables</button>
+			<button style="width:50%;" id="logout"
+				onclick="(function ret(){window.location.href='./index.html'})()">Logout</button>
+
+		</span>
+		<br style="line-height: 10;">
+		<div id="alert">
+			<h4 id="msg"></h4>
+		</div>
+	</div>
+
+
+</body>
+
+<script>
+
+
+
+	let url_departments = 'http://localhost:3000/departments'
+	let url_employees = 'http://localhost:3000/employees'
+	let alert_msg = document.querySelector("#alert")
+	let msg = alert_msg.querySelector('#msg')
+	let departments
+	let employees
+	let data_fetched = false
+	let _token
+	let apiAction
+
+
+	async function fetchData() {
+		addToken();
+		({ data: departments  } = await apiAction.get(url_departments));
+		({ data: employees  } = await apiAction.get(url_employees));
+		
+		if (!departments || !employees) {
+			data_fetched = false
+			message(6)
+		}
+		else {
+			message(5)
+			data_fetched = true
+			fillDropdown()
+
+		}
+
+	}
+	function addToken() {
+		_token = sessionStorage.getItem("token")
+		apiAction = axios.create({
+			headers: {
+				'Content-Type': 'application/json',
+				'x-access-token': _token
+			}
+		});
+	}
+
+
+
+	function fillDropdown() {
+		let select = document.getElementById('dropdown');
+		select.innerHTML = ""; // clear existing options
+		const option = document.createElement('option');
+		 option.text = `Select a Department`
+		 option.selected = true; 
+		 select.appendChild(option);
+		departments.forEach(function (dept) {
+			let option = document.createElement('option');
+			option.value = `${dept._id}`;
+			option.text = `${dept.name}`;
+			select.appendChild(option);
+		});
+	}
+
+	async function addEmp() {
+
+		let result
+		const firstname = document.getElementById('firstname').value
+		const lastname = document.getElementById('lastname').value
+		const yearjoined = document.getElementById('yearjoined').value
+		const selectElement = document.getElementById('dropdown');
+		const deptId = selectElement.value;
+
+
+
+		if (!firstname || !lastname || !yearjoined || !deptId) {
+			message(8)
+			clearTables()
+		}
+		else {
+			const postData = { firstname, lastname, yearjoined, deptId }
+
+			if (!validate(postData) || data_fetched === false || isDupllicant(postData)) {
+				message(1)
+				clearTables()
+			}
+
+			else {
+				result = await fetch(url_employees, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'x-access-token': _token
+					},
+					body: JSON.stringify(postData)
+				})
+				const data = await result.json()
+				message(2) //add successfuly
+				console.log({ info: data })
+				clearTables()
+				location.reload()
+
+			}
+		}
+	}
+
+
+	function validate(postData) {
+
+		const deptIdValid = departments.find(d => d._id === postData.deptId);
+		if (!deptIdValid) {
+			message(3) // manager or name invalid
+			console.log({ info: " inside validate failed" });
+			return false
+		}
+		message(4)// name valid
+		return true
+	}
+
+	function isDupllicant(postData) {
+		const empValid = employees.find(emp => (emp.firstname === postData.firstname)
+		 && (emp.lastname === postData.lastname));
+		if (empValid) {
+			message(7)
+			return true
+		}
+		return false
+	}
+
+	function message_res(result) {
+		msg.innerHTML = { info: result }
+		setTimeout(() => {
+			msg.innerHTML = null
+
+		}, 1000);
+	}
+
+	async function clearTables() {
+		const clear_list = document.querySelectorAll('input')
+		console.log({ data: clear_list });
+		clear_list.forEach(elem => {
+			elem.value = null
+		})
+	}
+
+	function message(num) {
+		switch (num) {
+			case 1:
+				msg.innerHTML = "Param Problem or  Employee Already Exists"
+				alert_msg.appendChild(msg)
+				break
+			case 2:
+				msg.innerHTML = "Added Successfully"
+				alert_msg.appendChild(msg)
+				break
+			case 3:
+				msg.innerHTML = "Invalid Dept id, please choose a valid one"
+				alert_msg.appendChild(msg)
+			case 4:
+				msg.innerHTML = "Data Verfied"
+				alert_msg.appendChild(msg)
+				break
+			case 5:
+				msg.innerHTML = "Data Fetched"
+				alert_msg.appendChild(msg)
+				break
+			case 6:
+				msg.innerHTML = "Data fetch failure"
+				alert_msg.appendChild(msg)
+				break
+			case 7:
+				msg.innerHTML = "Employee Already Exists"
+				alert_msg.appendChild(msg)
+				break
+			case 8:
+				msg.innerHTML = "Illegal input"
+				alert_msg.appendChild(msg)
+				break
+			default:
+				break
+		}
+		setTimeout(() => {
+			msg.innerHTML = null
+
+		}, 3000);
+	}
+
+
+
+
+
+
+	async function clearTables() {
+		const clear_list = document.querySelectorAll('.text-fields')
+		clear_list.forEach(elem => {
+			elem.value = null
+		})
+	}
+
+</script>
+
+
+
+</html>

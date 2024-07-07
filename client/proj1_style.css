@@ -1,0 +1,91 @@
+
+
+    table, th, td {
+        border: 3px solid black;
+        border-collapse: separate;
+
+      }
+      table{
+        text-align: center;
+      }
+
+      .column{
+        background-color: rgb(45, 0, 128);
+      }
+
+      #showtext{
+        color: red;
+        font-family: Arial, Helvetica, sans-serif   ;
+      }
+      .head1{
+        color: blue;
+        text-align: center;
+        font-family: Arial, Helvetica, sans-serif   ;
+      }
+      .shiftbutton{
+        background-color: rgb(102, 255, 0);
+      }
+
+      .text_boxes.tables{
+        text-align: center;
+        border: 1rem solid black;
+        color:black;
+        background-color: beige;
+        padding: 10px;
+        width: 50%;
+        margin: 0 auto;
+      }
+
+      .text_boxes.crud{
+        text-align: center;
+        border: 1rem solid black;
+        color:black;
+        background-color: beige;
+        padding: 10px;
+        width: 50%;
+        margin: 0 auto;
+      }
+
+      .textbox{
+        text-align:  left;
+        width: 75%;
+      }
+
+
+
+      .pressbutton , #btn-1{
+        border: 2px solid black;
+        color:black;
+        background-color: lightblue;
+        padding: 1em;
+        width: 100%;
+        margin: 0 auto;
+      }
+      
+      .center , .text-fields {
+        margin: auto;
+        border: 3px solid black;
+        width: 50%;
+        padding: 12px;
+      }
+
+
+.instruction{
+   color: black;
+   margin: auto;
+}
+
+  .flex-container {
+    display: flex;
+    background-color: DodgerBlue;
+    flex-wrap: wrap;
+    width: 35%;
+    text-align:center ;
+  }
+  .flex-div1{
+    text-align:left;
+    margin:0;
+    width: 100%;
+  }
+
+

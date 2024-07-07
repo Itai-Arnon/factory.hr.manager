@@ -1,0 +1,18 @@
+.main{
+    display: flex;
+    flex-direction: row;
+    justify-content: left ;
+
+}
+.left-container{
+      /*flex: 6 */
+    flex-basis:50%;
+    padding: 5px;
+    order: 1;
+}
+.right-container{
+    /*flex: 6 */
+    flex-basis:50%;
+    padding: 5px;
+    order: 2;
+}

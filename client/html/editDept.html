@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<!-- import of axios-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.2.1/axios.min.js"></script>
+	<script src="../utils/actions.js"></script>
+
+	<link rel="stylesheet" href="../css/editEmp.css">
+
+	<style>
+		.btn {
+
+			width: 50%;
+		}
+
+		.no-pressbutton {
+			width: 50%;
+		}
+
+		input {
+			width: 40%;
+			font-size: 1rem;
+		}
+	</style>
+	<title>Departments Editor</title>
+</head>
+
+<body onload="init()">
+	<div class="user-login">
+		<h5 id="userElement"></h5>
+	</div>
+	<h1 class="head1">Department Editor</h1>
+	<!-- text boxes shift tables -->
+	<div class="main">
+		<div class="left-container">
+			<h4>  Press Edit  To Start Editting This Department</h4>
+
+			Name:<select id="dept-dropdown" style="width:70%;">
+			</select>
+
+			<input type="hidden" id="current-dept-id">
+			<input type="hidden" id="current-dept-name">
+			<!--- add hidden input to storde id-->
+			<button class="no-pressbutton" name="enter-name">Edit</button> <br><br>
+			<button name="showDepartmentEmployees" class="btn">Show Employees Belongning To The Department</button>
+			<button name="showNonDepartmentEmployees" class="btn">Register Employees Department</button>
+			<br><br>
+			<!---function 0-->
+
+
+
+			<h2 class="instruction"> Fill In Parameters For Update</h2>
+			Department Name: <input type="text" id="dept-name" size="30" /> <br>
+			Manager Name: <select id="dropdown" style="width:70%;">
+				<option value="" selected> Select a Manager </option>
+			</select><br />
+			<input type="hidden" id="update-id"> <!---store dept id-->
+			<button name="updateDept" class="btn" size="40">Update Department's Details</button> <!---function 1-->
+
+
+
+			<h2 class="instruction">Delete Department and Its Employees </h2>
+			Name: <input type="text" id="delete-name" size="40" /> <br>
+			<input type="hidden" id="delete-id">
+			<button name="deleteDept" class="btn">Delete</button> <!---function 2-->
+
+
+		</div> <!-- end left container -->
+
+
+		<div class="right-container">
+			<!-- add invisibility here-->
+			<h4 id="table-container-text"></h4>
+			<div id="table-container"></div>
+
+			<h4 id="select-container-text"></h4>
+			<div id="select-container">
+			</div><br style="line-height:3em">
+			<h4></h4>
+			<!-- temporary text and table -->
+			<table id="t-move"></table>
+
+			<button style="width:50%;" onclick="clearTables()" class="btn" size="40" name="clearTables">Clear All
+				Tables</button>
+			<!---function 4-->
+			<button style="width:50%;" onclick="clearText()" class="btn" name="clearText">Clear All Text
+				Fields</button><br><!---function 5-->
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./departments.html'})()">Go Back
+				To Departments</button>
+			<button style="width:50%;" onclick="(function ret(){window.location.href='./employees.html'})()">Go Back To
+				Employees</button>
+			<button style="width:50%;" id="logout"
+				onclick="(function ret(){window.location.href='./index.html'})()">Logout</button>
+
+			<div id="alert">
+				<h4 id="msg"> </h4>
+			</div>
+
+		</div>
+
+		<!-- at some point add messages-->
+	</div>
+</body>
+
+<script>
+
+
+	//tables containers are called container 1 and container 2
+	let manager_select = document.getElementById('dropdown');
+	let dept_name_select = document.getElementById("dept-dropdown");
+	let alert_msg = document.querySelector("#alert")
+	let msg = alert_msg.querySelector("#msg")
+	let select_container_text = document.querySelector("#select-container-text")
+	let table_container_text = document.querySelector("#table-container-text")
+	let table_move = document.querySelector("#t-move");
+	let apiAction
+	let isDepartmentValid = false
+	let counter = 0
+	let departments // data is global and save redundant fetch
+	let employees
+	let current_dept_id = null
+	let current_dept_name = null
+	let select_container = null
+	let sentDepartment = null
+	let default_manager_id // default manager id 
+	let manager_id = null
+	let _insertSession = true //ensure session object is injected only once
+	let _token
+
+
+
+	const url_connectors = `http://localhost:3000/connectors`
+	const url_shifts = `http://localhost:3000/shifts`
+	const url_employees = `http://localhost:3000/employees`
+	const url_departments = `http://localhost:3000/departments`
+
+	async function fetchData() {
+		({ data: employees =[] } = await apiAction.get(url_employees));
+		({ data: departments =[] } = await apiAction.get(url_departments));
+	}
+
+	async function init() {
+		addToken();
+		({ data: employees } = await apiAction.get(url_employees));
+		({ data: departments } = await apiAction.get(url_departments));
+
+		if (!employees || !departments)
+			message(2)
+
+		else { //fill dropdowsn and check for session Storage
+
+			fillManagerDropdown() //fills the dept names
+			fillNameDropdown() //fills the dept names
+
+			const sentDepartment = JSON.parse(sessionStorage.getItem("department"))
+			console.log({ sentDept: sentDepartment })
+
+			if (sentDepartment && _insertSession) {
+				default_manager_id = sentDepartment.managerId
+				setDetails(sentDepartment)
+				isDepratment()
+				_insertSession = false //session will be insterted only once
+			}
+			//defining submit button
+			const input_name = document.querySelector(".no-pressbutton")
+			input_name.addEventListener("click", isDepratment)
+
+			//start of function pointer definitions
+
+			//list of function pointers - simplifies  contorlling the function
+			const list = document.querySelectorAll(".btn")
+			console.log({ info_list: list })
+			list.forEach(async (e, idx) => {
+				e.addEventListener("click", driver = async (ev) => {
+					e.setAttribute("id", idx)
+					let funcId = idx //number of function 
+					await divideIntoFunctions(funcId, ev) // pointer function 
+				})
+			})
+		}
+	}
+
+	function addToken() { //inserts token into each http method
+		_token = sessionStorage.getItem("token")
+		apiAction = axios.create({
+			headers: {
+				'Content-Type': 'application/json',
+				'x-access-token': _token
+			}
+		});
+	}
+
+	async function isDepratment() {
+		if (counter >= 3) { //makes sure user chooses valid dept
+			alert("You have entered an invalid name 3 times, please refresh the page")
+		}
+		else {
+			let dept_id = dept_name_select[dept_name_select.selectedIndex].value;
+			console.log({ info: dept_name_select.value });
+			const dept = departments.find(dept => String(dept._id) === dept_id);
+			if (!dept) {
+				console.log({ infoemp: dept });
+				counter++
+				isDepartmentValid = false
+				dept_id = null
+				clearAll()
+				clearText()
+				message(0)
+			} else {
+				counter = 0
+				clearAll()
+				current_dept_id = dept._id //hidden textboxes - store info for the entire process
+				setDetails(dept)//insert the details of the dept into the textboxes
+				isDepartmentValid = true
+				allRelevantEmployees(false)
+				message(1)
+			}
+		}
+	}
+
+
+	function setDetails(_dept) {
+		//values of select option are the dept id 
+		dept_name_select.value = (_dept._id) ? _dept._id : 0
+		manager_select.value = _dept.managerId
+		manager_id = _dept.managerId
+		current_dept_name = dept_name_select.options[dept_name_select.selectedIndex].text
+		document.getElementById("update-id").value = _dept._id;
+		document.getElementById("dept-name").value = _dept.name;
+		document.getElementById("delete-id").value = _dept._id
+		document.getElementById("delete-name").value = _dept.name
+		default_manager_id = _dept.managerId
+	}
+
+
+	async function divideIntoFunctions(funcId, ev) {
+		console.log({ func_info: funcId })
+		let arg
+		const arrPtr =
+			[{ "function": allRelevantEmployees, valid: true, param: true }, //0
+			{ "function": allRelevantEmployees, valid: true, param: false },//1
+			{ "function": updateDept, valid: true, param: null },//2
+			{ "function": deleteDept, valid: true, param: ev }, //3
+			{ "function": clearTables, valid: false, param: null },//4
+			{ "function": clearText, valid: false, param: null }//5
+			]
+		arg = arrPtr[funcId].param//
+		if (isDepartmentValid === true) {// all functions are allowed
+
+			if (funcId === 4 || funcId === 5) //clear tables and c
+				arrPtr[funcId].function()
+
+			await arrPtr[funcId].function(arg) // all functions are allowed
+
+		} else { //all cases of invalid dept
+			if (arrPtr[funcId].valid === false) //update and delete
+				arrPtr[funcId].function(null)
+			else { // showEmployees and showNonRegistered when employee not verified
+				message(2)
+				console.log({ isDepartmentValid_info: isDepartmentValid });
+			}
+		}
+	}
+
+	function fillNameDropdown() {
+		let _option = document.createElement('option');
+		_option.text = "Choose Department Name";
+		_option.value = 0; //a value used when no dept is found
+		dept_name_select.appendChild(_option);
+
+		for (let i = 0; i < departments.length; i++) {
+			let opt = document.createElement('option');
+			opt.value = departments[i]._id;
+			opt.innerHTML = departments[i].name;
+			if (i === 1) opt.selected = true
+
+			dept_name_select.appendChild(opt);
+		}
+	}
+
+
+
+
+	function fillManagerDropdown() {
+		manager_select.innerHTML = "Managers"; // clear existing options
+		let _option = document.createElement('option');
+		_option.text = "Select Manager From Dropdown";
+		_option.value = 0;
+		manager_select.appendChild(_option);
+		//dynamic part of dropdown
+		departments.forEach((dept) => {
+			let option = document.createElement('option');
+			let _emp = employees.find(emp => String(emp._id) === dept.managerId)
+			if (_emp) {
+				option.value = dept.managerId
+				option.text = `${_emp.firstname} ${_emp.lastname}`
+			}
+			else {
+				option.value = employees[1]._id
+				option.text = "Update Will not be possible without a manager"
+			}
+			if (default_manager_id === dept.managerId)
+				option.selected = true
+
+			manager_select.appendChild(option);
+		})
+		default_manager_id = null
+	}
+
+
+
+
+	// a dual function that supplies data to createRelatedEmployees and createDropDownTable
+	// creates data and sends it to the corresponding table or select
+	async function allRelevantEmployees(belong) { // belong is a boolean variable
+		let relevant_employees
+		let dept = departments.find(d => d._id == current_dept_id);
+		console.log({ current_dept_id });
+		//goes to createRegistered table
+		if (belong) {
+			relevant_employees = employees.filter(emp => emp.deptId === current_dept_id && emp._id !== dept.managerId)
+			console.log({ goes_to_createRegistered: relevant_employees });
+			return (!relevant_employees) ? [] : createRegisteredTable(relevant_employees)
+		}
+		//goes to createDropdown
+		if (!belong) {
+			relevant_employees = employees.filter(emp => emp.deptId !== current_dept_id && emp._id !== dept.managerId)
+			console.log({ goes_to_createDropdown: relevant_employees });
+			return (!relevant_employees) ? [] : createDropDownTable(relevant_employees)
+		}
+
+	}
+
+	/*Select construction*/
+	async function createDropDownTable(emp_data) {
+		clearSelect()
+		console.log({ infosh: emp_data })
+		if (emp_data == [] || emp_data.length === 0)//no dropdown will be created in this case
+			message(8);
+		else {
+			//Text above drop down table
+			select_container_text.innerHTML = `<i>Register Employees To This Department by picking their name in the DropDown<i>`
+			//container for all the dropdown
+			select_container = document.querySelector("#select-container")
+			const select = document.createElement("select")
+			//event listener basis
+			select.addEventListener("change", (ev) => {
+				console.log({ event: ev });
+				let i = ev.target.value
+				const desired = employees[i] //desired_employee we want to add
+				writeToTable(desired, ev, "add")
+			})
+			//static part of dropdown
+			const option = document.createElement("option")
+			option.innerHTML = `Press On An Employee's Name To Register Him`
+			option.setAttribute("selected", "selected")
+			option.setAttribute("value", "default")
+			select.appendChild(option)
+
+			//creates the dynamic part of the drop down
+			emp_data.forEach(async function (e, idx) {
+				const option = document.createElement("option")
+				option.innerHTML = `<h3> ${idx + 1}  ${e.firstname} ${e.lastname}</h3>`
+				option.setAttribute("value", idx) //value is the employee's name
+				select.appendChild(option)
+			})
+			//final appending of the entire dropdown
+			select_container.appendChild(select)
+		}
+	}
+	/* creates a registered to a dept tables */
+	async function createRegisteredTable(emp_data) {
+		clearTables()
+
+		const dept = departments.find(dept => dept._id === current_dept_id);
+		//the possiblity that there is no manager is dealt with
+		let manager = employees.find(emp => emp._id === dept.managerId);
+		//basic table setup headers and choice of container
+		const table_container = document.querySelector("#table-container")
+		const table = document.createElement("table")
+		const headers = document.createElement("tr")
+
+		//headers include option for removal button
+		headers.innerHTML = `<th>No.</th><th>Name</th><th>Department Name</th><th>Department Manager</th>
+		<th>Remove</th>`
+		table.appendChild(headers)
+
+		//empty table will be created  ibcase of empty employee data 
+		if (emp_data.length === 0) {
+			const tr_empty = document.createElement("tr")
+			//assures that the manager appears
+			if (!manager)
+				manager = { firstname: "No", lastname: "Manager" }
+
+			tr_empty.innerHTML = `<td>---</td><td> Department Is Empty </td><td>${current_dept_name}</td>
+				<td><strong>${manager.firstname} ${manager.lastname}<strong></td><td> N/A </td>`
+			table.appendChild(tr_empty)
+			table_container.appendChild(table)
+
+		}
+		else {
+			//once employee data exists a dynamic table is created
+
+			//to avoid confusion or lack of employment
+			//employees removed will be registered to the default department i.e deparmemnt[0]
+			table_container_text.innerHTML = `<h3>Employees Registered To ${current_dept_name}
+		Pick an Employee to remove him from here.<br/></h3><br/>`
+
+			emp_data.forEach(async function (e, idx) {
+
+				const tr_full = document.createElement("tr")
+				//sometimes a manager does not exist this creates an object to exhibits this
+				if (!manager)
+					manager = { firstname: "No", lastname: "Manager" }
+
+
+				//in case of removal from department employee will be automatically registered to default department
+				tr_full.innerHTML = `<td>${idx + 1}</td><td>${e.firstname} ${e.lastname}</td><td> ${current_dept_name}</td>
+				<td>${manager.firstname} ${manager.lastname}</td><td><button id="rem">Remove</button></td>`
+
+				//eventlister to remove Department employees
+				const rem = tr_full.querySelector("#rem")
+				rem.addEventListener('click', remove = (ev) => {
+					/* 	writeToTable(e, ev, "default") */
+					createTempTable(e)
+				})
+				table.appendChild(tr_full)
+			})
+			//append to main containter
+			table_container.appendChild(table)
+
+		}
+
+	}
+
+
+	function createTempTable(employeee) {
+		// Create table and table header
+		const theader = document.createElement("th");
+		theader.innerHTML = `<th>Where do you wish to move</th>`;
+		table_move.appendChild(theader);
+
+		departments.forEach((dept, idx) => {
+			const tr = document.createElement("tr");
+			tr.innerHTML = `<td>${idx + 1}</td><td>${dept.name}</td><td><button id="register-${idx}">Register</button></td>`;
+			table_move.appendChild(tr);
+
+			// Add event listener to the register button
+			const registerButton = tr.querySelector(`#register-${idx}`);
+			registerButton.addEventListener('click', (ev) => {
+				writeToTable(employeee, dept, "move");
+
+				console.log(`Register button clicked for department: ${dept.name}`);
+			});
+			table_move.appendChild(tr);
+		});
+
+
+	}
+
+
+	async function writeToTable(desired, dept, type) { //write to new dept or revert to defualt table
+		let updated_id = null
+		
+
+		if (!desired) message(2) //bad params 
+		else {
+			if (type === "add") // comes from dropdown menu and add to dept
+				updated_id = current_dept_id
+			else if (type === "move") // comes from dept listing menu and adds to default
+				updated_id = dept._id
+
+			console.log( current_dept_id === updated_id )
+			const result = await apiAction.put(`${url_employees}/${desired._id}`, {
+				firstname: desired.firstname,
+				lastname: desired.lastname,
+				yearjoined: desired.yearjoined,
+				deptId: updated_id,
+			})
+			console.log({ info__update_result: result })
+			table_move.innerHTML = ""
+			// reload()
+			message(10)
+			fetchData()
+			createRegisteredTable(employees)
+
+		}
+	}
+
+
+
+
+	async function updateDept() {
+
+		let result
+		if (current_dept_id !== null) {
+			const url_update_departments = `http://localhost:3000/departments/${current_dept_id}`
+			const name = document.getElementById("dept-name").value;
+			const managerId = manager_select.value;
+			if (!name || validate(managerId)) message(9)
+			else {
+				console.log({ update_info: "inside_update" })
+				result = await apiAction.put(url_update_departments, {
+					name,
+					managerId
+				})
+
+				console.log({ update_result: result })
+				message(10)
+				clearTables()
+				reload()
+				init()
+
+			}
+		} else message(7) // error
+	}
+
+	function validate(_managerId) {
+		const dept = departments.find(dept => dept._id == _managerId)
+		return (dept) ? true : false
+	}
+
+
+	async function deleteDept(ev) {//funcId = 3
+		console.log(ev)
+		let result
+		ev.preventDefault()
+		const userConfirmed = confirm(
+			"Are you sure you want to delete this department and all its employees?")
+
+		const delete_id = document.getElementById("delete-id").value
+		const delete_name = document.getElementById("delete-name").value
+		if (delete_id !== null && userConfirmed) {
+			await deleteEmployeesFromDept(delete_id)
+			const url_delete_departments = `${url_departments}/${delete_id}`;
+			result = await apiAction.delete(url_delete_departments)
+			console.log({ delete_func__response: result });
+			message(11)
+			clearTables()
+			reload()
+			console.log({ msg: result })//this goes to the message 
+		}
+
+		else message(12) // error and cancelled
+	}
+
+
+	async function deleteEmployeesFromDept(delete_id) {
+		let result
+		const deletion_list = employees.filter(emp => emp.deptId === delete_id)
+		if (!deletion_list || deletion_list.length === 0)
+			message(8)
+		else {
+			console.log(deletion_list);
+			deletion_list.forEach(async (emp) => {
+				let url_delete_employees = `${url_employees}/${emp.firstname}`
+				result = await apiAction.delete(url_delete_employees)
+				console.log({ deletion_empl: "inside" });
+				console.log({ info_res: result });
+
+			})
+			message(11)
+			reload()
+			init()
+		}
+	}
+
+	function reload() {
+		message(6)
+		window.location.reload();
+	}
+	function clearAll() {
+		clearTables()
+		clearSelect()
+	}
+
+	function clearTables() {
+		const table_container = document.querySelector("#table-container")
+		table_container.innerHTML = ""
+		select_container_text.innerHTML = ""
+		table_container_text.innerHTML = ""
+
+
+
+
+		//select_container = document.querySelector("#select-container")
+		//select_container.innerHTML = ""
+	}
+	function clearSelect() {
+		select_container = document.querySelector("#select-container")
+		select_container.innerHTML = ""
+	}
+
+
+	async function clearText() {
+		const listText = document.querySelectorAll("input")
+		listText.forEach(txt => txt.value = null)
+		isDepartmentValid = false
+		select_container_text.innerHTML = ""
+		table_container_text.innerHTML = ""
+		manager_select.value = 0
+		dept_name_select.value = 0
+		sessionStorage.removeItem('dept_name_select');
+	}
+
+
+
+	function message(num) {
+		switch (num) {
+			case 0: // unverrified name isEmployee
+				msg.innerHTML = "Invalid Name"
+				alert_msg.appendChild(msg)
+				break;
+			case 1: // verrified name isEmployee
+				msg.innerHTML = "Verified"
+				alert_msg.appendChild(msg)
+				break;
+			case 2://bad parameters
+				msg.innerHTML = "Invalid Employee"
+				alert_msg.appendChild(msg)
+				break;
+			case 3://data added on table 
+				msg.innerHTML = "Employee Invalid"
+				alert_msg.appendChild(msg)
+				break;
+			case 4://data edit Employee param mistake 
+				msg.innerHTML = "Employee is Already Registered to all shifts"
+				alert_msg.appendChild(msg)
+				break;
+			case 5: // writeToTable params
+				msg.innerHTML = "Bad Parmas"
+				alert_msg.appendChild(msg)
+				break;
+			case 6: //delete employee - does current_id exists 
+				msg.innerHTML = "Page will reload now"
+				alert_msg.appendChild(msg)
+				break;
+			case 7: //data added on table 
+				msg.innerHTML = "Department Id is Invalid"
+				alert_msg.appendChild(msg)
+				break;
+			case 8: //createTable
+				msg.innerHTML = "No Data Found"
+				alert_msg.appendChild(msg)
+				break;
+			case 9://update
+				msg.innerHTML = "Bad Params"
+				alert_msg.appendChild(msg)
+				break;
+			case 10: //writeToTableDept 
+				msg.innerHTML = "Data Written"
+				alert_msg.appendChild(msg)
+				break;
+			case 11: //delete 
+				msg.innerHTML = "Data Deleted"
+				alert_msg.appendChild(msg)
+				break;
+			case 12: //delete 
+				msg.innerHTML = "Department id invalid Or deletion cancelled"
+				alert_msg.appendChild(msg)
+				break;
+
+
+		}
+		setTimeout(() => {
+			msg.innerHTML = null
+
+		}, 1500);
+
+	}
+
+
+
+
+</script>
+
+</html>
