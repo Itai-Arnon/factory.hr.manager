@@ -46,11 +46,10 @@
 			<input type="hidden" id="current-dept-id">
 			<input type="hidden" id="current-dept-name">
 			<!--- add hidden input to storde id-->
-			<button class="no-pressbutton" name="enter-name">Edit</button> <br><br>
-			<button onclick="(function act1(){allRelevantEmployees(true)})()" name="showDepartmentEmployees"
-				class="btn">Show Employees Belongning To The Department</button>
-			<button onclick="(function act2(){allRelevantEmployees(false)})()" name="showNonDepartmentEmployees"
-				class="btn">Register Employees Department</button>
+			<button onclick="(function act1(){filterEmployees(true)})()" name="showDepartmentEmployees"
+				class="btn">Display Department Employees</button>
+			<button onclick="(function act2(){filterEmployees(false)})()" name="showNonDepartmentEmployees"
+				class="btn">Display Non Registered Employees</button>
 			<br><br>
 			<!---function 0-->
 
@@ -81,10 +80,14 @@
 			<h4 id="table-container-text"></h4>
 			<div id="table-container"></div>
 
-			<h4 id="select-container-text"></h4>
-			<div id="select-container">
-			</div><br style="line-height:3em">
-			<h4></h4>
+			<h4 id="select-employee-text"></h4>
+			<select id="select-employees" style="width:95%;">
+				<option value="0" selected>
+					 Press On An Employee's Name To Register Him 
+				</option>
+			</select>
+			<br><br><br><br>
+			
 			<!-- temporary text and table -->
 			<table id="t-move"></table>
 
@@ -118,9 +121,9 @@
 	let dept_name_select = document.getElementById("dept-dropdown");//html element
 	let alert_msg = document.querySelector("#alert")//html element
 	let msg = alert_msg.querySelector("#msg")//html element
-	let select_container_text = document.querySelector("#select-container-text")//html element
+	let select_employee_text = document.querySelector("#select-employee-text")//html element
 	let table_container_text = document.querySelector("#table-container-text")//html element
-	let select_container = document.querySelector("#select-container")
+	let select_emp = document.querySelector("#select-employees")
 	let table_move = document.querySelector("#t-move");//html element
 	let apiAction //axios object
 	let isDataValid = false
@@ -129,8 +132,8 @@
 	let set_dept_id = null
 	let set_dept_name = null
 	let sentDepartment = null
-	let set_manager_id = null
-	let _insertSession = true //ensure session object is injected only once
+	let set_manager_id = 0
+	let _sessionUsed = false //ensure session object is injected only once
 	let _token
 
 
@@ -161,66 +164,60 @@
 		await fetchData();
 
 		//fill dropdowsn and check for session Storage
-		if (isDataValid == true ) {
+		if (isDataValid == true) {
 			fillNameDropdown() //fills the dept names
 			fillManagerDropdown() //fills the dept names
 
 			sentDepartment = JSON.parse(sessionStorage.getItem("department"))
 			console.log({ sentDept: sentDepartment })
 
-			if (sentDepartment && _insertSession) {//_insert session if false - session will be inserted only once
+			if (sentDepartment && !_sessionUsed) {//_insert session if false - session will be inserted only once
 
 				setDetails(sentDepartment)
 				isDepratment()
-				_insertSession = false //session will be insterted only once
+				_sessionUsed = true //session will be insterted only once
 			}
+			else isDepratment()
 
-			//defining submit button
-			const input_name = document.querySelector(".no-pressbutton")
-			input_name.addEventListener("click", isDepratment)
+
 			//defining deleteDept button
 			const deleteButton = document.querySelector("#deleteDept").addEventListener("click", deleteDept = (ev) => {
 				deleteDept(ev);
 			})
 
+
 		} else message(8);
 	}
 
 
-	async function isDepratment() {
+	function isDepratment(val) {
+		console.log(val)
+		set_dept_id = (val) ? val : dept_name_select[dept_name_select.selectedIndex].value;
 
-		set_dept_id = dept_name_select[dept_name_select.selectedIndex].value;
-		console.log({ info: dept_name_select[dept_name_select.selectedIndex].value });
 		const dept = departments.find(dept => String(dept._id) === set_dept_id);
-		clearAll()
-		setDetails(dept)//insert the details of the dept into the textboxes
-		allRelevantEmployees(false)
-		message(1)
+		//clearAll()
+		console.log(dept);
+		if (!dept) message(8)
+		else {
+			setDetails(dept) //insert the details of the dept into the textboxes
+			//filterEmployees(false)
+			message(1)
+		}
+
 	}
-
-
 
 
 	function setDetails(_dept) {
 		//values of select option are the dept id 
-		if (_insertSession) {
-			//define select
-			// if (i === 1) opt.selected = true
-			dept_name_select.value = sentDepartment._id
-			manager_select.value = sentDepartment.managerId;
-			//define other vars
-			set_manager_id = sentDepartment.managerId; //hidden textboxes - store info for the entire process
-			set_dept_id = sentDepartment._id
-			set_dept_name = sentDepartment.name
-		}
-		else {
-			//define select
-			dept_name_select.value = _dept._id
-			manager_select.value = _dept.managerId
-			//define other vars	
-			set_manager_id = _dept.managerId; //hidden textboxes - store info for the entire process
-			set_dept_id = _dept._id
-		}
+		//define select
+		dept_name_select.value = String(_dept._id)
+		manager_select.value = String(_dept.managerId)
+		//define other vars	
+		set_manager_id = _dept.managerId; //hidden textboxes - store info for the entire process
+		set_dept_id = _dept._id
+		set_dept_name = sentDepartment.name
+
+
 		//set hidden textboxes
 		document.getElementById("dept-id").value = _dept._id;
 		document.getElementById("dept-name").value = _dept.name;
@@ -230,32 +227,82 @@
 
 
 	function fillNameDropdown() { //presents the department you want to edit
-		
 
 		for (let i = 0; i < departments.length; i++) {
 			let opt = document.createElement('option');
 			opt.value = departments[i]._id;
 			opt.innerHTML = departments[i].name;
-			if (i === 1) opt.selected = true
-
 			dept_name_select.appendChild(opt);
 		}
+		dept_name_select.addEventListener('change', act3 = (ev) => {
+			isDepratment(ev.target.value);
+
+		})
 	}
 
-
-
-
 	function fillManagerDropdown() {
-		
+
 		//dynamic part of dropdown
 		employees.forEach(emp => {
 			let opt = document.createElement('option');
 			opt.value = emp._id;
-			opt.text = `${emp.firstname}${emp.lastname}`;
+
+			if (!_sessionUsed && sentDepartment && opt.value === String(sentDepartment.managerId))
+				opt.selected = true
+			if (opt.value === set_manager_id && _sessionUsed)
+				opt.selected = true;
+
+			opt.text = `${emp.firstname} ${emp.lastname}`;
 			manager_select.appendChild(opt);
 		});
 
 	}
+
+	// a dual function that supplies data to createRelatedEmployees and createDropDownTable
+	// creates data and sends it to the corresponding table or select
+	async function filterEmployees(belong) { // belong is a boolean variable
+		let relevant_employees
+		let dept = departments.find(d => d._id == set_dept_id);
+
+		//goes to createRegistered table
+		if (belong) {//without removing managers undefined behavior occurs
+			relevant_employees = employees.filter(emp => emp.deptId === set_dept_id && emp._id !== dept.managerId)
+			console.log({ goes_to_createRegistered: relevant_employees });
+
+			/*  return (!relevant_employees) ? [] : createRegisteredTable(relevant_employees, dept)  */
+		}
+		//goes to createDropdown
+		if (!belong) {
+			relevant_employees = employees.filter(emp => emp.deptId !== set_dept_id && emp._id !== dept.managerId)
+			console.log({ goes_to_createDropdown: relevant_employees });
+			return (!relevant_employees) ? [] : createDropDownTable(relevant_employees ,dept) 
+		}
+	}
+
+	function createDropDownTable(employees, dept) {
+		
+		employees.forEach(function (employee) {
+			
+			let opt = document.createElement('option');
+			opt.text = employee.firstname + ' ' + employee.lastname;
+			// Set the option's value to the employee's ID
+			opt.value = employee._id;
+
+			// Append the option to the select element
+			select_emp.appendChild(opt);
+		});
+		select_emp.addEventListener("change", (ev) => {
+			console.log({ event: ev });
+			console.log({ d: dept });
+			const desired = ev.target.value //desired_emp_id we want to add
+			console.log (`writeToTable(desired, ev.target.value, "add", dept)`)
+		})
+
+
+	}
+
+
+
 
 
 
@@ -269,7 +316,39 @@
 		});
 	}
 
+	function reload() {
+		message(6)
+		window.location.reload();
+	}
 
+	function clearAll() {
+		clearTables()
+		clearSelect()
+	}
+
+	function clearTables() {
+		const table_container = document.querySelector("#table-container")
+		table_container.innerHTML = ""
+		select_container_text.innerHTML = ""
+		table_container_text.innerHTML = ""
+	}
+
+	function clearSelect() {
+
+		select_container.innerHTML = ""
+	}
+
+
+	async function clearText() {
+		const listText = document.querySelectorAll("input")
+		listText.forEach(txt => txt.value = null)
+		isDepartmentValid = false
+		select_container_text.innerHTML = ""
+		table_container_text.innerHTML = ""
+		manager_select.value = 0
+		dept_name_select.value = 0
+		sessionStorage.removeItem('dept_name_select');
+	}
 
 	function message(num) {
 		switch (num) {

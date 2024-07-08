@@ -1,0 +1,64 @@
+
+function message(num) {
+	switch (num) {
+		case 0: // unverrified name isEmployee
+			msg.innerHTML = "Invalid Name"
+			alert_msg.appendChild(msg)
+			break;
+		case 1: // verrified name isEmployee
+			msg.innerHTML = "Verified"
+			alert_msg.appendChild(msg)
+			break;
+		case 2://bad parameters
+			msg.innerHTML = "Invalid Employee"
+			alert_msg.appendChild(msg)
+			break;
+		case 3://data added on table 
+			msg.innerHTML = "Employee Invalid"
+			alert_msg.appendChild(msg)
+			break;
+		case 4://data edit Employee param mistake 
+			msg.innerHTML = "Employee is Already Registered to all shifts"
+			alert_msg.appendChild(msg)
+			break;
+		case 5: // writeToTable params
+			msg.innerHTML = "Bad Parmas"
+			alert_msg.appendChild(msg)
+			break;
+		case 6: //delete employee - does current_id exists 
+			msg.innerHTML = "Page will reload now"
+			alert_msg.appendChild(msg)
+			break;
+		case 7: //data added on table 
+			msg.innerHTML = "Department Id is Invalid"
+			alert_msg.appendChild(msg)
+			break;
+		case 8: //createTable
+			msg.innerHTML = "No Data Found"
+			alert_msg.appendChild(msg)
+			break;
+		case 9://update
+			msg.innerHTML = "Bad Params"
+			alert_msg.appendChild(msg)
+			break;
+		case 10: //writeToTableDept 
+			msg.innerHTML = "Data Written"
+			alert_msg.appendChild(msg)
+			break;
+		case 11: //delete 
+			msg.innerHTML = "Data Deleted"
+			alert_msg.appendChild(msg)
+			break;
+		case 12: //data_fetched 
+			msg.innerHTML = "Data Fetched "
+			alert_msg.appendChild(msg)
+			break;
+
+
+	}
+	setTimeout(() => {
+		msg.innerHTML = null
+
+	}, 3000);
+
+}

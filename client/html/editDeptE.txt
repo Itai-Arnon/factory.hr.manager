@@ -76,24 +76,7 @@
 
  
 
-	// a dual function that supplies data to createRelatedEmployees and createDropDownTable
-	// creates data and sends it to the corresponding table or select
-	async function allRelevantEmployees(belong) { // belong is a boolean variable
-		let relevant_employees
-		let dept = departments.find(d => d._id == set_dept_id);
-		console.log({ d: set_dept_id });
-		//goes to createRegistered table
-		if (belong) {
-			relevant_employees = employees.filter(emp => emp.deptId === set_dept_id && emp._id !== dept.managerId)
-			console.log({ goes_to_createRegistered: relevant_employees });
-			return (!relevant_employees) ? [] : createRegisteredTable(relevant_employees)
-		}
-		//goes to createDropdown
-		if (!belong) {
-			relevant_employees = employees.filter(emp => emp.deptId !== set_dept_id && emp._id !== dept.managerId)
-			console.log({ goes_to_createDropdown: relevant_employees });
-			return (!relevant_employees) ? [] : createDropDownTable(relevant_employees)
-		}
+	/
 
 	}
 
@@ -108,17 +91,12 @@
 			select_container_text.innerHTML = `<i>Register Employees To This Department by picking their name in the DropDown<i>`
 			//select container for all the dropdown defined as globla
 
-			const select = document.createElement("select")
+			const select_emp = document.createElement("select-employees")
 			//event listener basis
-			select.addEventListener("change", (ev) => {
-				console.log({ event: ev });
-				let i = ev.target.value
-				const desired = employees[i] //desired_employee we want to add
-				writeToTable(desired, ev, "add")
-			})
+			
 			//static part of dropdown
 			const option = document.createElement("option")
-			option.innerHTML = `Press On An Employee's Name To Register Him`
+			option.innerHTML = ``
 			option.setAttribute("selected", "selected")
 			option.setAttribute("value", "default")
 			select.appendChild(option)
@@ -331,40 +309,7 @@
 		}
 	}
 
-	function reload() {
-		message(6)
-		window.location.reload();
-	}
-	function clearAll() {
-		clearTables()
-		clearSelect()
-	}
-
-	function clearTables() {
-		const table_container = document.querySelector("#table-container")
-		table_container.innerHTML = ""
-		select_container_text.innerHTML = ""
-		table_container_text.innerHTML = ""
 
 
 
-
-		//select_container = document.querySelector("#select-container")
-		//select_container.innerHTML = ""
-	}
-	function clearSelect() {
 	
-		select_container.innerHTML = ""
-	}
-
-
-	async function clearText() {
-		const listText = document.querySelectorAll("input")
-		listText.forEach(txt => txt.value = null)
-		isDepartmentValid = false
-		select_container_text.innerHTML = ""
-		table_container_text.innerHTML = ""
-		manager_select.value = 0
-		dept_name_select.value = 0
-		sessionStorage.removeItem('dept_name_select');
-	}
