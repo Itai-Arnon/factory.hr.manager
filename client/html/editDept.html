@@ -368,38 +368,38 @@
 		// Create table and table header
 		if (table_move.innerHTML !== "")
 			table_move.innerHTML = ""
-	
-	
+
+
 		const theader = document.createElement("tr");
 		theader.innerHTML += `<th>No</th>`;
 		theader.innerHTML += `<th>Name</th>`;
 		theader.innerHTML += `<th>Move</th>`;
 		table_move.appendChild(theader);
-	
+
 		departments.forEach((dept, idx) => {
 			const tr = document.createElement("tr");
 			tr.innerHTML += `<td>${idx + 1}</td>`
 			tr.innerHTML += `<td>${dept.name}</td>`
 			tr.innerHTML += `<td><button id="move">Move</button></td>`;
 			table_move.appendChild(tr);
-	
+
 			// Add event listener to the register button
 			const registerButton = tr.querySelector(`#move`)
 				.addEventListener('click', (ev) => {
 					writeToTable(employeee, dept, "move");
-	
+
 					console.log(`Register button clicked for department: ${dept.name}`);
 				});
 			table_move.appendChild(tr);
 		});
 	}
-	
+
 	function showAlertMessage(message) {
 		alert(message);
 	}
-	
+
 	function updateEmployeeDept(emp, dept) {
-	
+
 		const url_employees = `http://localhost:3000/employees/${emp._id}`
 		let res;
 		let employee = {
@@ -408,45 +408,48 @@
 			yearjoined: emp.yearjoined,
 			deptId: dept._id
 		};
-	
+
 		if (validate(employee)) {
-	
+
 			res = await apiAction.put(url_employees, employee);
 			return res.data;
 			showReponseMessage(res.data);
 		} else {
 			message(2);
 		}
-	
+
 		function validate(employee) {
 			return (employee.firstname && employee.lastname && employee.yearjoined && employee.deptId) ? true : false;
 		}
 	}
 
 
-async function updateEmployeeDept(emp, dept) {
+	async function updateEmployeeDept(emp, dept) {
 
-	const url_employees = `http://localhost:3000/employees/${emp._id}`
-	let res;
-	let employee = {
-  firstname: emp.firstname,
-  lastname: emp.lastname,
-	yearjoined:emp.yearjoined,
-  deptId: dept._id 
-};
-	
-if(validate(employee)) {
-	
-	 res = await apiAction.put(url_employees, employee);
-	 return res.data;
-	 reponseMessage(res.data);
-}else {
-	 message(2);
-}
+		const url_employees = `http://localhost:3000/employees/${emp._id}`
+		let res;
+		let employee = {
+			firstname: emp.firstname,
+			lastname: emp.lastname,
+			yearjoined: emp.yearjoined,
+			deptId: dept._id
+		};
 
-function validate(employee) {
-	return (employee.firstname && employee.lastname && employee.yearjoined && employee.deptId) ? true : false	;
-}
+		if (validate(employee)) {
+
+			res = await apiAction.put(url_employees, employee);
+			
+			reponseMessage(res.data);
+		} else {
+			message(2);
+		}
+	}
+
+	function validate(employee) {
+		return (employee.firstname
+			&& employee.lastname && employee.yearjoined && employee.deptId) ? true : false;
+	}
+
 	function validateManager(_managerId) {
 		const dept = departments.find(dept => dept._id == _managerId)
 		return (dept) ? true : false
@@ -490,8 +493,8 @@ function validate(employee) {
 
 
 	function showResponseMessage(message) {
-    alert(message);
-}
+		alert(message);
+	}
 
 	function message(num) {
 		switch (num) {
