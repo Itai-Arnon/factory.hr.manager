@@ -12,6 +12,10 @@
 	<link rel="stylesheet" href="../css/editEmp.css">
 
 	<style>
+		/* table{
+		    display:none;
+		}
+ */
 		.btn {
 
 			width: 50%;
@@ -46,8 +50,8 @@
 			<input type="hidden" id="current-dept-id">
 			<input type="hidden" id="current-dept-name">
 			<!--- add hidden input to storde id-->
-			<button onclick="(function act1(){filterEmployees(true)})()" name="showDepartmentEmployees"
-				class="btn">Display Department Employees</button>
+			<button onclick="(function act1(){filterEmployees(true)})()" name="showDepartmentEmployees" class="btn">Display
+				Department Employees</button>
 			<button onclick="(function act2(){filterEmployees(false)})()" name="showNonDepartmentEmployees"
 				class="btn">Display Non Registered Employees</button>
 			<br><br>
@@ -78,16 +82,19 @@
 		<div class="right-container">
 			<!-- add invisibility here-->
 			<h4 id="table-container-text"></h4>
-			<div id="table-container"></div>
+			<table id="dept-table">
+
+
+			</table>
 
 			<h4 id="select-employee-text"></h4>
 			<select id="select-employees" style="width:95%;">
 				<option value="0" selected>
-					 Press On An Employee's Name To Register Him 
+					Press On An Employee's Name To Register Him
 				</option>
 			</select>
 			<br><br><br><br>
-			
+
 			<!-- temporary text and table -->
 			<table id="t-move"></table>
 
@@ -119,12 +126,13 @@
 	//tables containers are called container 1 and container 2
 	let manager_select = document.getElementById('manager-dropdown'); //html element
 	let dept_name_select = document.getElementById("dept-dropdown");//html element
+	let select_employee_text = document.querySelector("#select-employee-text")//html element
+	let select_emp = document.querySelector("#select-employees")
+	let table_container_text = document.querySelector("#table-container-text")//html element
+	let dept_table = document.querySelector("#dept-table");
+	let table_move = document.querySelector("#t-move");//html element
 	let alert_msg = document.querySelector("#alert")//html element
 	let msg = alert_msg.querySelector("#msg")//html element
-	let select_employee_text = document.querySelector("#select-employee-text")//html element
-	let table_container_text = document.querySelector("#table-container-text")//html element
-	let select_emp = document.querySelector("#select-employees")
-	let table_move = document.querySelector("#t-move");//html element
 	let apiAction //axios object
 	let isDataValid = false
 	let departments // data is global and save redundant fetch
@@ -163,6 +171,7 @@
 		addToken();
 		await fetchData();
 
+
 		//fill dropdowsn and check for session Storage
 		if (isDataValid == true) {
 			fillNameDropdown() //fills the dept names
@@ -199,11 +208,12 @@
 		console.log(dept);
 		if (!dept) message(8)
 		else {
-			setDetails(dept) //insert the details of the dept into the textboxes
+			setDetails(dept)
+			filterEmployees(false);
+			//insert the details of the dept into the textboxes
 			//filterEmployees(false)
 			message(1)
 		}
-
 	}
 
 
@@ -266,45 +276,181 @@
 
 		//goes to createRegistered table
 		if (belong) {//without removing managers undefined behavior occurs
-			relevant_employees = employees.filter(emp => emp.deptId === set_dept_id && emp._id !== dept.managerId)
+			relevant_employees = employees.filter(emp => emp.deptId === set_dept_id)
 			console.log({ goes_to_createRegistered: relevant_employees });
 
-			/*  return (!relevant_employees) ? [] : createRegisteredTable(relevant_employees, dept)  */
+			return (!relevant_employees) ? [] : createRegisteredTable(relevant_employees, dept)
 		}
 		//goes to createDropdown
 		if (!belong) {
-			relevant_employees = employees.filter(emp => emp.deptId !== set_dept_id && emp._id !== dept.managerId)
+			relevant_employees = employees.filter(emp => emp.deptId !== set_dept_id)
 			console.log({ goes_to_createDropdown: relevant_employees });
-			return (!relevant_employees) ? [] : createDropDownTable(relevant_employees ,dept) 
+			return (!relevant_employees) ? [] : createDropDownTable(relevant_employees, dept)
 		}
 	}
 
 	function createDropDownTable(employees, dept) {
-		
+
+		if (select_emp.innerHTML !== '')
+			select_emp.innerHTML = '';
+
 		employees.forEach(function (employee) {
-			
 			let opt = document.createElement('option');
 			opt.text = employee.firstname + ' ' + employee.lastname;
-			// Set the option's value to the employee's ID
 			opt.value = employee._id;
-
-			// Append the option to the select element
 			select_emp.appendChild(opt);
 		});
 		select_emp.addEventListener("change", (ev) => {
 			console.log({ event: ev });
 			console.log({ d: dept });
 			const desired = ev.target.value //desired_emp_id we want to add
-			console.log (`writeToTable(desired, ev.target.value, "add", dept)`)
+			console.log(`writeToTable(desired, ev.target.value, "add", dept)`)
 		})
+	}
 
+	async function createRegisteredTable(emp_data, dept) {
+		if (dept_table.innerHTML !== "")
+			dept_table.innerHTML = ""
 
+		let header = document.createElement("tr")
+		header.innerHTML += `<th>No.</th>`
+		header.innerHTML += `<th>Name</th>`
+		header.innerHTML += `<th>Department Name</th>`
+		header.innerHTML += `<th>Department Manager</th>`
+		header.innerHTML += `<th>Remove</th>`
+		dept_table.appendChild(header);
+
+		let manager = employees.find(emp => emp._id === dept.managerId);
+
+		//empty table will be created  ibcase of empty employee data 
+		if (emp_data.length === 0 || emp_data == [])
+			createEmptyTable(dept, manager)
+		else
+			createFullTable(emp_data, dept, manager)
+	}
+
+	function createEmptyTable(dept, manager) {
+		const tr_empty = document.createElement("tr")
+		if (!manager)
+			manager = { firstname: "No", lastname: "Manager" }
+		tr_empty.innerHTML += `<td>---</td><td> Department Is Empty </td>`
+		tr_empty.innerHTML += `<td>${set_dept_name}</td>`
+		tr_empty.innerHTML += `<td><strong>${manager.firstname} ${manager.lastname}<strong></td>`
+		tr_empty.innerHTML += `<td> N/A </td>`
+
+		dept_table.appendChild(tr_empty)
 	}
 
 
+	function createFullTable(emp_data, dept, manager) {
+
+		emp_data.forEach(async function (emp, idx) {
+			let tr_full = document.createElement("tr")
+			//sometimes a manager does not exist this creates an object to exhibits this
+			if (!manager)
+				manager = { firstname: "No", lastname: "Manager" }
+
+			tr_full.innerHTML += `<td>${idx + 1}</td><td>${emp.firstname} ${emp.lastname}</td>`
+			tr_full.innerHTML += `<td> ${set_dept_name}</td>`
+			tr_full.innerHTML += `<td>${manager.firstname} ${manager.lastname}</td>`
+			tr_full.innerHTML += `<td><button id="rem">Remove</button></td>`
+
+			//eventlister to remove Department employees
+			const rem = tr_full.querySelector("#rem")
+				.addEventListener('click', remove = (ev) => {
+					createMoveTable(emp);
+				})
+			dept_table.appendChild(tr_full)
+		})
+	}
+
+	function createMoveTable(employeee) {
+		// Create table and table header
+		if (table_move.innerHTML !== "")
+			table_move.innerHTML = ""
+	
+	
+		const theader = document.createElement("tr");
+		theader.innerHTML += `<th>No</th>`;
+		theader.innerHTML += `<th>Name</th>`;
+		theader.innerHTML += `<th>Move</th>`;
+		table_move.appendChild(theader);
+	
+		departments.forEach((dept, idx) => {
+			const tr = document.createElement("tr");
+			tr.innerHTML += `<td>${idx + 1}</td>`
+			tr.innerHTML += `<td>${dept.name}</td>`
+			tr.innerHTML += `<td><button id="move">Move</button></td>`;
+			table_move.appendChild(tr);
+	
+			// Add event listener to the register button
+			const registerButton = tr.querySelector(`#move`)
+				.addEventListener('click', (ev) => {
+					writeToTable(employeee, dept, "move");
+	
+					console.log(`Register button clicked for department: ${dept.name}`);
+				});
+			table_move.appendChild(tr);
+		});
+	}
+	
+	function showAlertMessage(message) {
+		alert(message);
+	}
+	
+	function updateEmployeeDept(emp, dept) {
+	
+		const url_employees = `http://localhost:3000/employees/${emp._id}`
+		let res;
+		let employee = {
+			firstname: emp.firstname,
+			lastname: emp.lastname,
+			yearjoined: emp.yearjoined,
+			deptId: dept._id
+		};
+	
+		if (validate(employee)) {
+	
+			res = await apiAction.put(url_employees, employee);
+			return res.data;
+			showReponseMessage(res.data);
+		} else {
+			message(2);
+		}
+	
+		function validate(employee) {
+			return (employee.firstname && employee.lastname && employee.yearjoined && employee.deptId) ? true : false;
+		}
+	}
 
 
+async function updateEmployeeDept(emp, dept) {
 
+	const url_employees = `http://localhost:3000/employees/${emp._id}`
+	let res;
+	let employee = {
+  firstname: emp.firstname,
+  lastname: emp.lastname,
+	yearjoined:emp.yearjoined,
+  deptId: dept._id 
+};
+	
+if(validate(employee)) {
+	
+	 res = await apiAction.put(url_employees, employee);
+	 return res.data;
+	 reponseMessage(res.data);
+}else {
+	 message(2);
+}
+
+function validate(employee) {
+	return (employee.firstname && employee.lastname && employee.yearjoined && employee.deptId) ? true : false	;
+}
+	function validateManager(_managerId) {
+		const dept = departments.find(dept => dept._id == _managerId)
+		return (dept) ? true : false
+	}
 
 	function addToken() { //inserts token into each http method
 		_token = sessionStorage.getItem("token")
@@ -327,28 +473,25 @@
 	}
 
 	function clearTables() {
-		const table_container = document.querySelector("#table-container")
-		table_container.innerHTML = ""
-		select_container_text.innerHTML = ""
-		table_container_text.innerHTML = ""
+		dept_table.innerHTML = ""
 	}
 
-	function clearSelect() {
-
-		select_container.innerHTML = ""
-	}
 
 
 	async function clearText() {
 		const listText = document.querySelectorAll("input")
 		listText.forEach(txt => txt.value = null)
 		isDepartmentValid = false
-		select_container_text.innerHTML = ""
 		table_container_text.innerHTML = ""
 		manager_select.value = 0
 		dept_name_select.value = 0
 		sessionStorage.removeItem('dept_name_select');
 	}
+
+
+	function showResponseMessage(message) {
+    alert(message);
+}
 
 	function message(num) {
 		switch (num) {
