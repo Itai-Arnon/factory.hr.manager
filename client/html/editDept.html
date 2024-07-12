@@ -50,10 +50,11 @@
 			<input type="hidden" id="current-dept-id">
 			<input type="hidden" id="current-dept-name">
 			<!--- add hidden input to storde id-->
-			<button onclick="(function act1(){filterEmployees(true)})()" name="showDepartmentEmployees" class="btn">Display
+			<button onclick="(function act1(){filterEmployees(true )})()" name="showDepartmentEmployees"
+				class="btn">Show Updated
 				Department Employees</button>
-			<button onclick="(function act2(){filterEmployees(false)})()" name="showNonDepartmentEmployees"
-				class="btn">Display Non Registered Employees</button>
+			<button onclick="(function act2(){filterEmployees|(false )})()" name="showNonDepartmentEmployees"
+				class="btn">Update Non Registered Employees</button>
 			<br><br>
 			<!---function 0-->
 
@@ -89,9 +90,7 @@
 
 			<h4 id="select-employee-text"></h4>
 			<select id="select-employees" style="width:95%;">
-				<option value="0" selected>
-					Press On An Employee's Name To Register Him
-				</option>
+
 			</select>
 			<br><br><br><br>
 
@@ -183,7 +182,7 @@
 			if (sentDepartment && !_sessionUsed) {//_insert session if false - session will be inserted only once
 
 				setDetails(sentDepartment)
-				isDepratment()
+				isDepratment(sentDepartment._id)
 				_sessionUsed = true //session will be insterted only once
 			}
 			else isDepratment()
@@ -270,7 +269,7 @@
 
 	// a dual function that supplies data to createRelatedEmployees and createDropDownTable
 	// creates data and sends it to the corresponding table or select
-	async function filterEmployees(belong) { // belong is a boolean variable
+	function filterEmployees(belong) { // belong is a boolean variable
 		let relevant_employees
 		let dept = departments.find(d => d._id == set_dept_id);
 
@@ -293,6 +292,12 @@
 
 		if (select_emp.innerHTML !== '')
 			select_emp.innerHTML = '';
+		select_emp.style.display = 'none';
+		const opt_one = document.createElement('option');
+		opt_one.text = "Press On An Employee's Name To Register Him";
+		opt_one.value = 0;
+		opt_one.selected = true;
+		select_emp.appendChild(opt_one);
 
 		employees.forEach(function (employee) {
 			let opt = document.createElement('option');
@@ -301,10 +306,8 @@
 			select_emp.appendChild(opt);
 		});
 		select_emp.addEventListener("change", (ev) => {
-			console.log({ event: ev });
-			console.log({ d: dept });
-			const desired = ev.target.value //desired_emp_id we want to add
-			console.log(`writeToTable(desired, ev.target.value, "add", dept)`)
+			const emp = employees.find(e => e._id === ev.target.value);
+			updateEmployeeDept(emp, dept);
 		})
 	}
 
@@ -319,7 +322,7 @@
 		header.innerHTML += `<th>Department Manager</th>`
 		header.innerHTML += `<th>Remove</th>`
 		dept_table.appendChild(header);
-
+		console.log("--------------------------------")
 		let manager = employees.find(emp => emp._id === dept.managerId);
 
 		//empty table will be created  ibcase of empty employee data 
@@ -327,6 +330,7 @@
 			createEmptyTable(dept, manager)
 		else
 			createFullTable(emp_data, dept, manager)
+			select_emp.style.display = 'block';
 	}
 
 	function createEmptyTable(dept, manager) {
@@ -334,7 +338,7 @@
 		if (!manager)
 			manager = { firstname: "No", lastname: "Manager" }
 		tr_empty.innerHTML += `<td>---</td><td> Department Is Empty </td>`
-		tr_empty.innerHTML += `<td>${set_dept_name}</td>`
+		tr_empty.innerHTML += `<td>${dept.name}</td>`
 		tr_empty.innerHTML += `<td><strong>${manager.firstname} ${manager.lastname}<strong></td>`
 		tr_empty.innerHTML += `<td> N/A </td>`
 
@@ -351,7 +355,7 @@
 				manager = { firstname: "No", lastname: "Manager" }
 
 			tr_full.innerHTML += `<td>${idx + 1}</td><td>${emp.firstname} ${emp.lastname}</td>`
-			tr_full.innerHTML += `<td> ${set_dept_name}</td>`
+			tr_full.innerHTML += `<td> ${dept.name}</td>`
 			tr_full.innerHTML += `<td>${manager.firstname} ${manager.lastname}</td>`
 			tr_full.innerHTML += `<td><button id="rem">Remove</button></td>`
 
@@ -364,7 +368,7 @@
 		})
 	}
 
-	function createMoveTable(employeee) {
+	function createMoveTable(employee) {
 		// Create table and table header
 		if (table_move.innerHTML !== "")
 			table_move.innerHTML = ""
@@ -386,47 +390,19 @@
 			// Add event listener to the register button
 			const registerButton = tr.querySelector(`#move`)
 				.addEventListener('click', (ev) => {
-					writeToTable(employeee, dept, "move");
-
-					console.log(`Register button clicked for department: ${dept.name}`);
+					updateEmployeeDept(employee, dept);
 				});
 			table_move.appendChild(tr);
 		});
 	}
 
-	function showAlertMessage(message) {
-		alert(message);
-	}
-
-	function updateEmployeeDept(emp, dept) {
-
-		const url_employees = `http://localhost:3000/employees/${emp._id}`
-		let res;
-		let employee = {
-			firstname: emp.firstname,
-			lastname: emp.lastname,
-			yearjoined: emp.yearjoined,
-			deptId: dept._id
-		};
-
-		if (validate(employee)) {
-
-			res = await apiAction.put(url_employees, employee);
-			return res.data;
-			showReponseMessage(res.data);
-		} else {
-			message(2);
-		}
-
-		function validate(employee) {
-			return (employee.firstname && employee.lastname && employee.yearjoined && employee.deptId) ? true : false;
-		}
-	}
-
-
 	async function updateEmployeeDept(emp, dept) {
+		if (table_move.innerHTML !== "")
+			table_move.innerHTML = ""
 
+		console.log(emp._id);
 		const url_employees = `http://localhost:3000/employees/${emp._id}`
+		console.log("inside update Emp dept");
 		let res;
 		let employee = {
 			firstname: emp.firstname,
@@ -435,24 +411,115 @@
 			deptId: dept._id
 		};
 
-		if (validate(employee)) {
+		console.log("valid:" + validate(employee) + " Duplicate:" + Duplicate(emp, dept));
+
+		if (validate(employee) && !Duplicate(emp, dept)) {
 
 			res = await apiAction.put(url_employees, employee);
-			
-			reponseMessage(res.data);
+			interpretServerResponse(res, "Update");
+
 		} else {
+
 			message(2);
 		}
+		fetchData();
+		filterEmployees(true);
+		filterEmployees(false);
 	}
+
+
+
+	async function updateDept() {
+
+		let result
+		if (set_dept_id !== null) {
+			const url_update_departments = `http://localhost:3000/departments/${set_dept_id}`
+			const name = document.getElementById("dept-name").value;
+			console.log(name);
+			const managerId = manager_select.options[manager_select.selectedIndex].value;
+			if (!name || duplicateManager(managerId, name)) message(5) /* "Bad Params or already manager */
+			else {
+				console.log({ update_info: "inside_update" })
+				result = await apiAction.put(url_update_departments, {
+					name,
+					managerId
+				})
+				interpretServerResponse(result, "Update");
+
+				message(10) // "Data Written"
+				clearTables()
+				fetchData()
+				reload()
+
+
+			}
+		} else message(7) // error
+	}
+
+
+
+	 async function deleteDept(ev) {//funcId = 3
+			console.log(ev)
+			let result
+			ev.preventDefault()
+			const userConfirmed = confirm(
+				"Are you sure you want to delete this department and all its employees?")
+	
+			const delete_id = document.getElementById("delete-id").value
+			const delete_name = document.getElementById("delete-name").value
+			if (delete_id !== null && userConfirmed) {
+				await deleteEmployeesFromDept(delete_id)
+				const url_delete_departments = `${url_departments}/${delete_id}`;
+				result = await apiAction.delete(url_delete_departments)
+				interpretServerResponse(result,"Delete department")
+			
+				message(11)
+				clearTables()
+				reload()
+				console.log({ msg: result })//this goes to the message 
+			}
+	
+			else message(12) // error and cancelled
+		}
+	
+	
+		async function deleteEmployeesFromDept(delete_id) {
+			let result
+			const deletion_list = employees.filter(emp => emp.deptId === delete_id)
+			if (!deletion_list || deletion_list.length === 0)
+				message(8)
+		/* 	else {
+				console.log(deletion_list);
+				deletion_list.forEach(async (emp) => {
+					let url_delete_employees = `${url_employees}/${emp._id}`
+					result = await apiAction.delete(url_delete_employees)
+					interpretServerResponse(result,"Delete All Employees from Department")
+					console.log({ deletion_empl: "inside" });
+					console.log({ info_res: result });
+	
+				}) */
+				message(11)
+				reload()
+				init()
+			//}
+		
+			}
+	 
+
 
 	function validate(employee) {
-		return (employee.firstname
-			&& employee.lastname && employee.yearjoined && employee.deptId) ? true : false;
+		return (employee.firstname && employee.lastname && employee.yearjoined && employee.deptId) ? true : false;
 	}
 
-	function validateManager(_managerId) {
-		const dept = departments.find(dept => dept._id == _managerId)
-		return (dept) ? true : false
+	function Duplicate(employee, dept) {
+		return employees.find(e => e._id === employee._id && e.deptId === dept._id) ? true : false;
+
+	}
+
+
+
+	function duplicateManager(_managerId, dept_name) {
+		return departments.find(dept => dept.name === dept_name && dept.managerId === _managerId) ? true : false
 	}
 
 	function addToken() { //inserts token into each http method
@@ -463,6 +530,25 @@
 				'x-access-token': _token
 			}
 		});
+	}
+
+	function interpretServerResponse(res, action) {
+		// Check if the response status code indicates success (200-299 range)
+		if (res.status >= 200 && res.status < 300) {
+			showResponseMessage(`${action} was successfull`);
+
+			// Optionally, handle the response data if needed
+			if (res.data) {
+				console.log("Response data:", JSON.stringify(res.data));
+			}
+		} else {
+			// Handle different types of errors based on status code
+			showResponseMessage("${action} failed with status code:", res.status);
+			if (res.data) {
+				console.error("Error details:", JSON.stringify(res.data));
+			}
+			// You can add more specific error handling here based on status codes
+		}
 	}
 
 	function reload() {
@@ -496,6 +582,8 @@
 		alert(message);
 	}
 
+
+
 	function message(num) {
 		switch (num) {
 			case 0: // unverrified name isEmployee
@@ -519,7 +607,7 @@
 				alert_msg.appendChild(msg)
 				break;
 			case 5: // writeToTable params
-				msg.innerHTML = "Bad Parmas"
+				msg.innerHTML = "Bad Parmas or Already the Manager"
 				alert_msg.appendChild(msg)
 				break;
 			case 6: //delete employee - does current_id exists 
