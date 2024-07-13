@@ -55,8 +55,8 @@ const updateEmployee = async (_ID ,_firstname, _lastname , _yearjoined , _deptId
 const deleteEmployee = async (_ID) => {
     try {
         const result = await Employee.deleteOne({ _id: _ID })
-        return {info:result}
-    
+		console.log("deletion result" + result);
+		return { info: result }
     
     }
         

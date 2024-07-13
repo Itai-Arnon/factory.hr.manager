@@ -74,7 +74,7 @@
 			<h2 class="instruction">Delete Department and Its Employees </h2>
 			Name: <input type="text" id="delete-name" size="40" /> <br>
 			<input type="hidden" id="delete-id">
-			<button id="deleteDept" class="btn">Delete</button> <!---function 2-->
+			<button id="deleteDept" onclick="((ev) => deleteDept(ev))" class="btn">Delete</button> <!---function 2-->
 
 
 		</div> <!-- end left container -->
@@ -170,8 +170,13 @@
 		addToken();
 		await fetchData();
 
+		//defining deleteDept button
+		const deleteButton = document.querySelector("#deleteDept").addEventListener("click", act_delete = (ev) => {
+			deleteDept(ev);
+		})
 
-		//fill dropdowsn and check for session Storage
+
+		//fill dropdowsn and check for session Storage=
 		if (isDataValid == true) {
 			fillNameDropdown() //fills the dept names
 			fillManagerDropdown() //fills the dept names
@@ -188,13 +193,8 @@
 			else isDepratment()
 
 
-			//defining deleteDept button
-			const deleteButton = document.querySelector("#deleteDept").addEventListener("click", deleteDept = (ev) => {
-				deleteDept(ev);
-			})
-
-
 		} else message(8);
+
 	}
 
 
@@ -292,7 +292,8 @@
 
 		if (select_emp.innerHTML !== '')
 			select_emp.innerHTML = '';
-		select_emp.style.display = 'none';
+
+
 		const opt_one = document.createElement('option');
 		opt_one.text = "Press On An Employee's Name To Register Him";
 		opt_one.value = 0;
@@ -306,12 +307,16 @@
 			select_emp.appendChild(opt);
 		});
 		select_emp.addEventListener("change", (ev) => {
-			const emp = employees.find(e => e._id === ev.target.value);
+			console.log(ev.target.checked);
+			const emp = employees.find(e => String(e._id) === ev.target.value);
 			updateEmployeeDept(emp, dept);
 		})
 	}
 
 	async function createRegisteredTable(emp_data, dept) {
+
+		let manager;
+
 		if (dept_table.innerHTML !== "")
 			dept_table.innerHTML = ""
 
@@ -322,15 +327,16 @@
 		header.innerHTML += `<th>Department Manager</th>`
 		header.innerHTML += `<th>Remove</th>`
 		dept_table.appendChild(header);
-		console.log("--------------------------------")
-		let manager = employees.find(emp => emp._id === dept.managerId);
+		if (dept !== null)
+			manager = employees.find(emp => emp._id === dept.managerId);
 
 		//empty table will be created  ibcase of empty employee data 
 		if (emp_data.length === 0 || emp_data == [])
 			createEmptyTable(dept, manager)
 		else
 			createFullTable(emp_data, dept, manager)
-			select_emp.style.display = 'block';
+
+
 	}
 
 	function createEmptyTable(dept, manager) {
@@ -343,6 +349,7 @@
 		tr_empty.innerHTML += `<td> N/A </td>`
 
 		dept_table.appendChild(tr_empty)
+
 	}
 
 
@@ -366,6 +373,7 @@
 				})
 			dept_table.appendChild(tr_full)
 		})
+
 	}
 
 	function createMoveTable(employee) {
@@ -422,7 +430,7 @@
 
 			message(2);
 		}
-		fetchData();
+		await fetchData();
 		filterEmployees(true);
 		filterEmployees(false);
 	}
@@ -447,9 +455,9 @@
 				interpretServerResponse(result, "Update");
 
 				message(10) // "Data Written"
-				clearTables()
-				fetchData()
-				reload()
+				await fetchData()
+				filterEmployees(true);
+				filterEmployees(false);
 
 
 			}
@@ -458,53 +466,55 @@
 
 
 
-	 async function deleteDept(ev) {//funcId = 3
-			console.log(ev)
-			let result
-			ev.preventDefault()
-			const userConfirmed = confirm(
-				"Are you sure you want to delete this department and all its employees?")
-	
-			const delete_id = document.getElementById("delete-id").value
-			const delete_name = document.getElementById("delete-name").value
-			if (delete_id !== null && userConfirmed) {
-				await deleteEmployeesFromDept(delete_id)
-				const url_delete_departments = `${url_departments}/${delete_id}`;
-				result = await apiAction.delete(url_delete_departments)
-				interpretServerResponse(result,"Delete department")
-			
-				message(11)
-				clearTables()
-				reload()
-				console.log({ msg: result })//this goes to the message 
-			}
-	
-			else message(12) // error and cancelled
+	async function deleteDept(ev) {//funcId = 3
+		console.log(ev)
+		let result
+		ev.preventDefault()
+		const userConfirmed = confirm(
+			"Are you sure you want to delete this department and all its employees?")
+
+		const delete_id = document.getElementById("delete-id").value
+		const delete_name = document.getElementById("delete-name").value
+		if (delete_id !== null && userConfirmed) {
+			result = await deleteEmployeesFromDept(delete_id, delete_name)
+			/* 	interpretServerResponse(result, "Deletion of the All Employees from" + delete_name + "Department") */
+			const url_delete_departments = `${url_departments}/${delete_id}`;
+			result = await apiAction.delete(url_delete_departments);
+			/* interpretServerResponse(result, "Delete department") */
+			message(11)
+			clearTables()
+			reload()
+			await fetchData()
+			isDepratment(departments[0]._id);
+			console.log({ msg: result })//this goes to the message 
 		}
-	
-	
-		async function deleteEmployeesFromDept(delete_id) {
-			let result
-			const deletion_list = employees.filter(emp => emp.deptId === delete_id)
-			if (!deletion_list || deletion_list.length === 0)
-				message(8)
-		/* 	else {
-				console.log(deletion_list);
-				deletion_list.forEach(async (emp) => {
-					let url_delete_employees = `${url_employees}/${emp._id}`
-					result = await apiAction.delete(url_delete_employees)
-					interpretServerResponse(result,"Delete All Employees from Department")
-					console.log({ deletion_empl: "inside" });
-					console.log({ info_res: result });
-	
-				}) */
-				message(11)
-				reload()
-				init()
-			//}
-		
-			}
-	 
+
+		else message(12) // error and cancelled
+
+	}
+
+
+
+
+	async function deleteEmployeesFromDept(delete_id, delete_name) {
+		let result
+		const deletion_list = employees.filter(emp => emp.deptId === delete_id)
+		if (!deletion_list || deletion_list.length === 0) /* No data found */
+			message(8)
+		else {
+			let len = deletion_list.length;
+			console.log("inside deletion list");
+			deletion_list.forEach(async (emp, idx) => {
+				let url_delete_employees = `${url_employees}/${emp._id}`
+				console.log({ name_deleted: deletion_list[idx].fullname });
+				result = await apiAction.delete(url_delete_employees)
+			})
+			return result;
+
+		}
+
+	}
+
 
 
 	function validate(employee) {
@@ -532,24 +542,6 @@
 		});
 	}
 
-	function interpretServerResponse(res, action) {
-		// Check if the response status code indicates success (200-299 range)
-		if (res.status >= 200 && res.status < 300) {
-			showResponseMessage(`${action} was successfull`);
-
-			// Optionally, handle the response data if needed
-			if (res.data) {
-				console.log("Response data:", JSON.stringify(res.data));
-			}
-		} else {
-			// Handle different types of errors based on status code
-			showResponseMessage("${action} failed with status code:", res.status);
-			if (res.data) {
-				console.error("Error details:", JSON.stringify(res.data));
-			}
-			// You can add more specific error handling here based on status codes
-		}
-	}
 
 	function reload() {
 		message(6)

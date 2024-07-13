@@ -137,14 +137,14 @@
 		});
 	}
 
-	async function isEmployee() {
+	async function isEmployee(val) {
 
 		isEmployeeValid = false
 		let limit = 3
 		if (counter >= limit)
 			alert(`You have entered an invalid name ${limit} times, please refresh the page`)
 		else {
-			const employee = emp_select.options[emp_select.selectedIndex] //fullname
+			const employee = (!val) ? emp_select.options[emp_select.selectedIndex].value : val;
 			console.log({ info: employee })
 
 			const emp = employees.find(elem => elem._id === emp_select.options[emp_select.selectedIndex].value)
@@ -167,7 +167,7 @@
 
 	function fillEmployeeDropdown() {
 		// Clear existing options
-
+		if(emp_select.innerHTML !=="")  emp_select.innerHTML = ""
 		// Create default option
 		let defaultOption = document.createElement('option');
 		defaultOption.value = 0;
@@ -184,6 +184,10 @@
 			// Set the second option as selected
 			emp_select.appendChild(option);
 		});
+
+		emp_select.addEventListener('change', act3 = (ev) => {
+			isEmployee(ev.target.value);
+		})
 	}
 
 	//
@@ -351,6 +355,7 @@
 		table.innerHTML = null
 
 	}
+	
 
 	function message(num) {
 		switch (num) {

@@ -49,6 +49,6 @@ app.use('/', (req, res) => {
 
 // Start the server
 app.listen(PORT, () => {
-    console.log(`Server started at ${(new Date()).toLocaleTimeString()}`);
+    console.log(`Server started at ${(new Date()).toString()}`);
     console.log(`app is listening at http://localhost:${PORT} \n`);
 });

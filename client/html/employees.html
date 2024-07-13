@@ -20,6 +20,9 @@
 			</table>
 
 			<button style="width:50%;" onclick="fetchData()">Revert Back To Start </button>
+			<!-- remove shift table -->
+			<button style="width:50%;" onclick="clearTables(shifts)"> Close Shifts Table </button>
+
 			<button style="width:50%;" onclick="(function ret(){window.location.href='./addEmp.html'})()">New
 				Employee</button>
 			<button style="width:50%;" onclick="(function ret(){window.location.href='./departments.html'})()">Go To
@@ -40,19 +43,19 @@
 		</div>
 		<div class="right-container">
 			<h3>To see which employess belong to which Department use the Dropdown </h3>
-			<div id="select-container">
+			<div style="width:80%;" id="select-container">
 				<select id="select">
 				</select>
 				<br /><br />
 			</div>
-		
-		
+
+
 			<h2 id="shift-text"> </h2>
 			<table id="myShiftTable">
 			</table>
 
 
-		
+
 			<!-- buttons here-->
 		</div>
 
@@ -68,8 +71,9 @@
 	let select_container = document.querySelector("#select-container")
 	let dept_select = document.querySelector("#select")
 	let shift_text = document.querySelector("#shift-text")
+	let myTable = document.querySelector("#myTable")
 	let employee = null
-	let employees
+	let employees = null
 	let departments = null
 	let data_fetched = null
 	let apiAction
@@ -83,6 +87,7 @@
 	async function fetchData() {
 
 		addToken();
+
 		({ data: employees } = await apiAction.get(url_employees));
 		({ data: departments } = await apiAction.get(url_departments));
 
@@ -97,8 +102,9 @@
 			message(4);
 			data_fetched = true
 			clearSelect()
-			createSelect(employees)
-			createMainTable(employees)
+			createSelect()
+			let deptId = dept_select[dept_select.selectedIndex].value;
+			prepMainTable(deptId)
 		}
 	}
 
@@ -112,23 +118,22 @@
 		});
 	}
 
-	async function createSelect(employees) {
+	async function createSelect() {
 
 		let option
 		if (data_fetched) {
-			dept_select.addEventListener("change", (event) => {
-				prepMainTable(event.target.value, employees)
-			})
-			const startopt = document.createElement("option")
-			startopt.innerHTML = "Please select a department"
-			startopt.value = undefined
-			startopt.selected = "selected"
-			dept_select.appendChild(startopt)
 
-			option = document.createElement("option")
-			option.innerHTML = "All Employees"
-			option.value = 0
-			dept_select.appendChild(option)
+			/* const startopt = document.createElement("option")
+			startopt.innerHTML = "Please select a department"
+			startopt.value = 0
+		
+			dept_select.appendChild(startopt) */
+
+			optAll = document.createElement("option")
+			optAll.innerHTML = "All Employees"
+			optAll.value = 0
+			optAll.selected = true
+			dept_select.appendChild(optAll)
 
 			departments.forEach((dept, idx) => {
 				option = document.createElement("option")
@@ -137,48 +142,77 @@
 				dept_select.appendChild(option)
 			})
 			select_container.appendChild(dept_select)
+
+			dept_select.addEventListener("change", (event) => {
+				prepMainTable(event.target.value)
+			})
 		}
 		else
 			message(3)
 	}
-//this function has several functions:
-//1. display all employees in the main table
-//2. enable going to editDept and EditEmp  details being autofilled
-//3. show the shift of each employee
-//4. with the help of the dropdown shows which specific dept employee belongs to
-	function createMainTable(employees) {
-		clearTables("main")
-		let dept = null;
-		const myTable = document.querySelector("#myTable")
-		const headers = document.createElement("tr")
-		headers.innerHTML = `<th>Number</th><th>Name</th><th>Year Joined</th><th>Department</th><th>Shifts</th>`
-		myTable.appendChild(headers)
 
 
-		employees.forEach((elem, idx) => {
+	function prepMainTable(deptId) {
+
+
+		if (data_fetched) {
+
+			clearTables("main")
+
+			const headers = document.createElement("tr")
+			headers.innerHTML = `<th>Number</th><th>Name</th><th>Year Joined</th><th>Department</th><th>Shifts</th>`
+			myTable.appendChild(headers)
+
+			if (deptId === "0") {
+
+				createMainTable(employees)
+			}
+			else {
+				filtered_employees = employees.filter(emp => String(emp.deptId) === deptId)
+				console.log(filtered_employees)
+
+				if (filtered_employees.length === 0 || filtered_employees == []  )
+					createEmptyTable(deptId)
+				else
+					createMainTable(filtered_employees)
+			}
+		}
+		else
+			message(3)
+
+	}
+
+	//this function has several functions:
+	//1. display all employees in the main table
+	//2. enable going to editDept and EditEmp  details being autofilled
+	//3. show the shift of each employee
+	//4. with the help of the dropdown shows which specific dept employee belongs to
+	function createMainTable(emp_data) {
+
+
+		emp_data.forEach((elem, idx) => {
 			dept = departments.find(d => String(d._id) === elem.deptId)
-			employee = elem
+
 			if (!dept) dept = { name: "unassigned" }
+
 			let tr = document.createElement("tr")
-			tr.innerHTML =
-				`<td> <strong>${idx + 1}</strong></td>
-				<td id="emp-button"><strong> ${elem.firstname} ${elem.lastname}</strong></td>
-                    <td> ${elem.yearjoined}</td>
-                    <td id="dept-button" classname="d">${dept.name}</td>
-                    <td><button id="shift-button">Shifts</button></td>`
+			tr.innerHTML += `<td><strong>${idx + 1}</strong></td>`
+			tr.innerHTML += `<td id="emp-button"><strong> ${elem.firstname} ${elem.lastname}</strong></td>`
+			tr.innerHTML += `<td> ${elem.yearjoined}</td>`
+			tr.innerHTML += `<td id="dept-button" classname="d">${dept.name}</td>`
+			tr.innerHTML += ` <td><button id="shift-button">Shifts</button></td>`
+
 
 			const emp_button = tr.querySelector("#emp-button")
 			emp_button.setAttribute("style", "font-style:italic;")
 			emp_button.addEventListener("click", action1 = () => {
 				gotoEditEmployee(elem)
-				console.log({ info: "pressed" })
 			})
-			
+
 			const dept_button = tr.querySelector("#dept-button")
 			dept_button.setAttribute("style", "font-style:italic;")
 			dept_button.addEventListener("click", action2 = () => {
-				gotoEditDept(dept) 
-				console.log({ info: event.target.tagName })
+				gotoEditDept(dept)
 			})
 
 			const shift_button = tr.querySelector("#shift-button")
@@ -187,27 +221,30 @@
 				clearTables("shifts")
 				shiftTablePrep(elem)
 			})
-
 			myTable.appendChild(tr)
 
 		});
 	}
 
-	function prepMainTable(deptId, employees) {
-		if (data_fetched) {
-			if (deptId === "0") {
-				createMainTable(employees)
-				console.log({ info: event.target.value })
-			}
-			else {
-				const filtered_employees = employees.filter(emp => emp.deptId === deptId)
-				createMainTable(filtered_employees)
-			}
-		}
-		else
-			message(3)
+	function createEmptyTable(deptId) {
+		let dept = departments.find((d) => String(d._id) === deptId);
+		
+		if (!dept) dept = { name: "unassigned" }
+
+		const tr_empty = document.createElement("tr")
+
+		tr_empty.innerHTML += `<td>---</td>`
+		tr_empty.innerHTML += `<td>N/A</td>`
+		tr_empty.innerHTML += `<td> Department Is Empty </td>`
+		tr_empty.innerHTML += `<td>${dept.name}</td>`
+		tr_empty.innerHTML += `<td> N/A </td>`
+
+		myTable.appendChild(tr_empty)
 
 	}
+
+
+
 
 
 	async function shiftTablePrep(elem) {
@@ -264,25 +301,31 @@
 
 	function gotoEditEmployee(elem) {
 		if (elem._id) {
-		sessionStorage.setItem('employee', JSON.stringify(elem))
-		window.location.href = './editEmp.html'
-		}else
+			sessionStorage.setItem('employee', JSON.stringify(elem))
+			window.location.href = './editEmp.html'
+		} else
 			message(5)
 	}
 
 	function clearTables(type) {
 
-		const table_container1 = document.querySelector("#myTable")
-		const table_container2 = document.querySelector("#myShiftTable")
-		if (type === "all") {
-			table_container1.innerHTML = ""
-			table_container2.innerHTML = ""
-		}
-		if (type === "main") {
-			table_container1.innerHTML = ""
-		}
-		if (type === "shifts") {
-			table_container2.innerHTML = ""
+		const myShiftTable = document.querySelector("#myShiftTable")
+		switch (type) {
+
+			case "all": {
+				if (myTable.innerHTML !== "") myTable.innerHTML = ""
+				if (myShiftTable.innerHTML !== "") myShiftTable.innerHTML = ""
+				break;
+			}
+			case "main": {
+				if (myTable.innerHTML !== "") myTable.innerHTML = ""
+				break;
+			}
+			case "shifts":
+				if (myShiftTable.innerHTML !== "") myShiftTable.innerHTML = ""
+				break;
+			default:
+				break;
 		}
 	}
 

@@ -32,6 +32,25 @@ const displayUserLogo = async () => {
 	}
 }
 
+function interpretServerResponse(res, action) {
+	// Check if the response status code indicates success (200-299 range)
+	if (res.status >= 200 && res.status < 300) {
+		alert(`${action} was successfull`);
+
+		// Optionally, handle the response data if needed
+		if (res.data) {
+			console.log("Response data:", JSON.stringify(res.data));
+		}
+	} else {
+		// Handle different types of errors based on status code
+		alert("${action} failed with status code:", res.status);
+		if (res.data) {
+			console.error("Error details:", JSON.stringify(res.data));
+		}
+		// You can add more specific error handling here based on status codes
+	}
+}
+
 
 
 

@@ -6,5 +6,7 @@
 //TODOS: manager menu is co dependent on registed managers
 //TODOS: problem wite write to table - from initial dropdown
 //TODOS: not to fuck up dept id continue developing idea behind moving people when ereased from dpet
+
+//TODOS: employees doesn't have empty table option
  or place 0 to show not registered
 dropdown doensn't enter the update state when inside write  function
