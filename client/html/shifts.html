@@ -41,24 +41,25 @@
 		<div class="left-container">
 
 			<h4>Verify Employee First To Enable Registration To Shifts
-			Then Select a Shift From The Table And Press Register</h4>
+				Then Select a Shift From The Table And Press Register</h4>
 			<div class="interface-flex"> <!-- In charge of all page interface-->
 				<div class="buttons1-flex">
 					Name: <select id="emp-dropdown" style="width:80%;"></select>
 
-					<input type="hidden" id="current-name" size="30" /> <br>
+					<input type="hidden" id="current-name"  size="30" /> <br>
 					<input type="hidden" id="current-emp-id" /> <br>
-					<button id="updateEmp" style="width: 50%;" onclick="isEmployee()">Verify Employee</button>
-					<button id="registerEmp" style="width: 50%;" onclick="registerEmployee()">Register To Shift</button>
+					<!-- <button id="updateEmp" style="width: 50%;" onclick="isEmployee()">Verify Employee</button> -->
+					<button id="registerEmp" style="width: 50%;" onclick="registerEmployee()">Register Employee To
+						Shift</button>
 					<br>
-					<h3 class="instruction" id="add">Selected Shifts Can  be editted and New Shifts can be Added <br>
+					<h3 class="instruction" id="add">Selected Shifts Can be editted and New Shifts can be Added <br>
 						By Pressing The According Buttons</h3> <br>
 				</div>
 
 				<div class="text-fields-flex">
-					Date: <input type="text" id="shift_date" size="30" /> <br>
-					Start Time: <input type="text" id="shift_start" size="30" /> <br>
-					End Time: <input type="text" id="shift_end" size="30" /> <br>
+					Date: <input type="text" id="shift_date" class="visible" size="30" /> <br>
+					Start Time: <input type="text" id="shift_start" class="visible" size="30" /> <br>
+					End Time: <input type="text" id="shift_end" class="visible" size="30" /> <br>
 					<input type="hidden" id="shift_id" />
 				</div>
 				<div class="buttons2-flex">
@@ -90,15 +91,17 @@
 
 	let isEmployeeValid = false
 	let counter = 0
-	const shift_id = document.querySelector("#shift_id") //hidden
-	const shift_date = document.querySelector("#shift_date")
-	const shift_start = document.querySelector("#shift_start")
-	const shift_end = document.querySelector("#shift_end")
+	let shift_id = document.querySelector("#shift_id") //hidden
+	let shift_date = document.querySelector("#shift_date")
+	let shift_start = document.querySelector("#shift_start")
+	let shift_end = document.querySelector("#shift_end")
 	let alert_msg = document.querySelector("#alert")
 	let msg = alert_msg.querySelector("#msg")
 	let emp_select = document.querySelector("#emp-dropdown");
-	const emp_name = document.querySelector("#current-name")   //hidden
-	const emp_id = document.querySelector("#current-emp-id")   //hidden
+	let emp_name = document.querySelector("#current-name")   //hidden
+	let emp_id = document.querySelector("#current-emp-id")   //hidden
+	let set_emp_id;
+
 	let shifts
 	let connectors
 	let employees
@@ -110,18 +113,21 @@
 	const url_employees = `http://localhost:3000/employees`
 
 
-	async function showAllShifts() {
-
-		addToken();
-
+	async function fetchData() {
 		({ data: employees } = await apiAction.get(url_employees));
 		({ data: connectors } = await apiAction.get(url_connectors));
 		({ data: shifts } = await apiAction.get(url_shifts));
+	}
+
+	async function showAllShifts() {
+
+		addToken();
+		isEmployeeValid = false;
+		await fetchData();
 		if (!shifts || !connectors || !employees)
-			message(1)
+			message(1);
 		else {
 			fillEmployeeDropdown()
-
 			createTable(shifts)
 
 		}
@@ -139,35 +145,27 @@
 
 	async function isEmployee(val) {
 
-		isEmployeeValid = false
-		let limit = 3
-		if (counter >= limit)
-			alert(`You have entered an invalid name ${limit} times, please refresh the page`)
+		set_emp_id = (!val) ? emp_select.options[emp_select.selectedIndex].value : val;
+		console.log({ set_emp_id: set_emp_id });
+
+		const emp = employees.find(elem => elem._id === set_emp_id);
+		console.log({ id_inside_emp_select: emp_select.options[emp_select.selectedIndex].value });
+		if (!emp) message(8)
 		else {
-			const employee = (!val) ? emp_select.options[emp_select.selectedIndex].value : val;
-			console.log({ info: employee })
 
-			const emp = employees.find(elem => elem._id === emp_select.options[emp_select.selectedIndex].value)
-			console.log({ id_inside_emp_select: emp_select.options[emp_select.selectedIndex].value });
-			if (!emp) {
-				counter++
-			} else {
-				isEmployeeValid = true
-				counter = 0
-				emp_id.value = emp._id // hidden
-				emp_name.value = emp.firstname // hidden
-				console.log({ is_Employee_Valid: isEmployeeValid })
-				console.log({ info_inside_hiddem_emp_id: emp_id.value })
-				message(2)
-			}
+			isEmployeeValid = true
+			emp_id.value = emp._id // emp_id & emp_name are hidden
+			emp_name.value = emp.firstname // hidden
+
+			console.log({ is_Employee_Valid: isEmployeeValid })
+			console.log({ info_inside_hiddem_emp_id: emp_id.value })
+			message(2)
 		}
-
 	}
-
 
 	function fillEmployeeDropdown() {
 		// Clear existing options
-		if(emp_select.innerHTML !=="")  emp_select.innerHTML = ""
+		if (emp_select.innerHTML !== "") emp_select.innerHTML = ""
 		// Create default option
 		let defaultOption = document.createElement('option');
 		defaultOption.value = 0;
@@ -190,13 +188,13 @@
 		})
 	}
 
-	//
 	function selectShift(shift) {
 		//the variables to the left are the textboxes
-		shift_id.value = String(shift._id)
+		shift_id.value = shift._id
 		shift_date.value = shift.date
 		shift_start.value = shift.startTime
 		shift_end.value = shift.endTime
+
 
 		message(3)
 	}
@@ -206,26 +204,29 @@
 	function createTable(shifts) {
 		/*Table construction*/
 		restartTable();
-
 		const table = document.querySelector(".myShiftTable")
 		const headers = document.createElement("tr")
 		headers.innerHTML = `<th> No.</th><th>Date</th><th> Start Time </th><th>End Time</th><th>Edit</th>`
 		table.appendChild(headers)
 		console.log({ info: shifts })
 
-		
 
 		if (shifts.length > 0) {
 			shifts.forEach((shift, idx) => {
-				const tr = document.createElement("tr")
-				//table row including two buttons  edit  and add - in congruence to a valid employee adds add the selected shift to thou 
-				tr.innerHTML = `<td> ${idx + 1}</td><td>${shift.date}</td><td>${shift.startTime}
-          </td><td>${shift.endTime}</td><td><button id="this-shift">Select</button></td>`
+				const tr = document.createElement("tr");
+				//table row including Select  button- purpose: add the selected shift to employee
+				//or edit it 
+				tr.innerHTML += `<td> ${idx + 1}</td>`;
+				tr.innerHTML += `<td>${shift.date}</td>`;
+				tr.innerHTML += `<td>${shift.startTime}</td>`;
+				tr.innerHTML += `<td>${shift.endTime}</td>`;
+				tr.innerHTML += `<td><button id ="this-shift" >Select</button></td>`;
 
-				const select = tr.querySelector("#this-shift")
-				select.addEventListener("click", action = () => {
-					selectShift(shift)
-					console.log({ info: "pressed" })
+
+				const select_but = tr.querySelector("#this-shift");
+				select_but.addEventListener("click", action = () => {
+					selectShift(shift);
+					console.log({ info: "pressed" });
 				})
 				table.appendChild(tr)
 			})
@@ -260,156 +261,155 @@
 			console.log({ info: `${url_shifts} /${s_id}` })
 			result = await apiAction.put(`${url_shifts}/${s_id}`, _shift)
 			message(4)//registered
-			console.log({ edit_shist_result: result })
+			console.log({ edit_shist_result: result });
 			restartTable()
-			await showAllShifts()
+			await fetchData()
+		}
+	}
+
+		async function registerEmployee() {//listener to table
+			console.log({ info_valid: isEmployeeValid })
+			if (isEmployeeValid) {
+
+				let _emp_id = emp_id.value;
+				let _shift_id = shift_id.value;
+				console.log({ info: _emp_id });
+				console.log({ info: _shift_id });
+				//prevents duplicate entries
+				let registered = checkIfRegistered(_emp_id, _shift_id)
+				let result
+				if (!registered && valid(_emp_id, _shift_id)) {  //post
+					//function that checks if already registerer 
+					console.log({ info_result: "inside_register" })
+					result = await apiAction.post(`${url_connectors}`, {
+						employeeid: String(_emp_id),
+						shiftid: String(_shift_id)
+					})
+					message(6) //register
+					await fetchData()
+					clearTextBoxes()
+					restartTable()
+					createTable(shifts)
+					console.log({ info_result: result })
+				} else message(7) //already registered
+
+			} else message(11)//employee is invalid
+
 		}
 
 
-	}
+		/*only func that works without a valid employee */
+		async function AddNewShift() {
 
-	async function registerEmployee() {//listener to table
-		console.log({ info_valid: isEmployeeValid })
-		if (isEmployeeValid) {
-
-			const emp_id = document.querySelector("#current-emp-id").value
-			const shift_id = document.querySelector("#shift_id").value
-			console.log({ info: emp_id });
-			console.log({ info: shift_id });
-			//prevents duplicate entries
-			let registered = checkIfRegistered(emp_id, shift_id)
 			let result
-			if (emp_id !== null && shift_id !== null && !registered && valid(emp_id, shift_id)) {  //post
-				//function that checks if already registerer 
-				console.log({ info_result: "inside_register" })
-				result = await apiAction.post(`${url_connectors}`, {
-					employeeid: String(emp_id),
-					shiftid: String(shift_id)
-				})
-				message(6) //register
-				clearTextBoxes()
+			const shift_date = document.querySelector("#shift_date").value
+			const shift_start = document.querySelector("#shift_start").value
+			const shift_end = document.querySelector("#shift_end").value
+			const _shift = { date: shift_date, startTime: +shift_start, endTime: +shift_end }
+
+
+			if (shift_date !== null && shift_start !== null && shift_end !== null && !isDuplicate(_shift)) {
+				result = await apiAction.post(url_shifts, _shift)
+				message(9);
 				restartTable()
-				createTable(shifts)
-				console.log({ info_result: result })
-			} else message(7) //already registered
+				await fetchData()
+			} else message(10) // cannot add 
 
-		} else message(11)//employee is invalid
-	}
-
-	/*only func that works without a valid employee */
-	async function AddNewShift() {
-
-		let result
-		const shift_date = document.querySelector("#shift_date").value
-		const shift_start = document.querySelector("#shift_start").value
-		const shift_end = document.querySelector("#shift_end").value
-		const _shift = { date: shift_date, startTime: +shift_start, endTime: +shift_end }
+			console.log({ info_result: result })
 
 
-		if (shift_date !== null && shift_start !== null && shift_end !== null && !isDuplicate(_shift)) {
-			result = await apiAction.post(url_shifts, _shift)
-			message(9);
-			restartTable()
-			await showAllShifts()
-		} else message(10) // cannot add 
-
-		console.log({ info_result: result })
-
-
-	}
-
-	function isDuplicate(_shift) {
-		const shiftDup = shifts.find(s => (_shift.date === s.date) &&
-			(_shift.startTime === s.startTime) && (_shift.endTime === s.endTime));
-		if (shiftDup) {
-			return true;
 		}
-		return false;
-	}
 
-	function valid(emp_id, shift_id) {
-		empVal = employees.find(e => e._id === emp_id)
-		shiftVal = shifts.find(s => s._id === shift_id)
-		if (empVal && shiftVal) return true
-		message(5)
-		return false
-	}
-	function checkIfRegistered(_employeeid, _shiftid) {
-
-		const connector = connectors.find(c =>
-			(c.employeeid === String(_employeeid)) && (c.shiftid === String(_shiftid)))
-		if (connector) return true
-		return false
-	}
-
-	function clearTextBoxes() {
-		const clear_list = document.querySelectorAll("input")
-		clear_list.forEach(elem => {
-			elem.value = null
-		})
-		isEmployeeValid = false
-	}
-
-	function restartTable() {
-		const table = document.querySelector(".myShiftTable")
-		table.innerHTML = null
-
-	}
-	
-
-	function message(num) {
-		switch (num) {
-			case 1:
-				msg.innerHTML = "Error fetching data"
-				alert_msg.appendChild(msg)
-				break;
-			case 2://bad parameters
-				msg.innerHTML = "Verified"
-				alert_msg.appendChild(msg)
-				break;
-			case 3: // zero length shifts arr
-				msg.innerHTML = "Shift Selected"
-				alert_msg.appendChild(msg)
-				break;
-			case 4://data editted successfully
-				msg.innerHTML = "Shift Updated"
-				alert_msg.appendChild(msg)
-				break;
-			case 5: //data added on table 
-				msg.innerHTML = "Shift either Invalid or A shift like that already Exists"
-				alert_msg.appendChild(msg)
-				break;
-			case 6: //data added on table 
-				msg.innerHTML = "Registered"
-				alert_msg.appendChild(msg)
-				break;
-			case 7: //data added on table 
-				msg.innerHTML = "Update Cancelled, Already Registered Or Invalid. Enter Shift Details more Exactly "
-				alert_msg.appendChild(msg)
-				break;
-			case 8: //data added on table 
-				msg.innerHTML = "Wrong Param"
-				alert_msg.appendChild(msg)
-				break;
-			case 9:
-				msg.innerHTML = "Success"
-				alert_msg.appendChild(msg)
-				break;
-			case 10: //data added on table 
-				msg.innerHTML = "Cannot Add , Duplicate Shift or Invalid Params"
-				alert_msg.appendChild(msg)
-				break;
-			case 11: //employee is invalid 
-				msg.innerHTML = "Employee is Invalid"
-				alert_msg.appendChild(msg)
-				break;
+		function isDuplicate(_shift) {
+			const shiftDup = shifts.find(s => (_shift.date === s.date) &&
+				(_shift.startTime === s.startTime) && (_shift.endTime === s.endTime));
+			if (shiftDup) {
+				return true;
+			}
+			return false;
 		}
-		setTimeout(() => {
-			msg.innerHTML = null
 
-		}, 2000);
+		function valid(emp_id, shift_id) {
+			empVal = employees.find(e => e._id === emp_id)
+			shiftVal = shifts.find(s => s._id === shift_id)
+			if (empVal && shiftVal) return true
+			message(5)
+			return false
+		}
+		function checkIfRegistered(_employeeid, _shiftid) {
 
-	}
+			const connector = connectors.find(c =>
+				(c.employeeid === String(_employeeid)) && (c.shiftid === String(_shiftid)))
+			if (connector) return true
+			return false
+		}
+
+		function clearTextBoxes() {
+			const clear_list = document.querySelectorAll("input.visible")
+			clear_list.forEach(elem => {
+				elem.value = null
+			})
+		}
+
+		function restartTable() {
+			const table = document.querySelector(".myShiftTable")
+			table.innerHTML = "";
+		}
+
+
+		function message(num) {
+			switch (num) {
+				case 1:
+					msg.innerHTML = "Error fetching data"
+					alert_msg.appendChild(msg)
+					break;
+				case 2://bad parameters
+					msg.innerHTML = "Verified"
+					alert_msg.appendChild(msg)
+					break;
+				case 3: // zero length shifts arr
+					msg.innerHTML = "Shift Selected"
+					alert_msg.appendChild(msg)
+					break;
+				case 4://data editted successfully
+					msg.innerHTML = "Shift Updated"
+					alert_msg.appendChild(msg)
+					break;
+				case 5: //data added on table 
+					msg.innerHTML = "Shift either Invalid or A shift like that already Exists"
+					alert_msg.appendChild(msg)
+					break;
+				case 6: //data added on table 
+					msg.innerHTML = "Registered"
+					alert_msg.appendChild(msg)
+					break;
+				case 7: //data added on table 
+					msg.innerHTML = "Update Cancelled, Already Registered Or an Unkown Error Occurred. Enter Shift Details more Exactly "
+					alert_msg.appendChild(msg)
+					break;
+				case 8: //data added on table 
+					msg.innerHTML = "Wrong Param"
+					alert_msg.appendChild(msg)
+					break;
+				case 9:
+					msg.innerHTML = "Success"
+					alert_msg.appendChild(msg)
+					break;
+				case 10: //data added on table 
+					msg.innerHTML = "Cannot Add , Duplicate Shift or Invalid Params"
+					alert_msg.appendChild(msg)
+					break;
+				case 11: //employee is invalid 
+					msg.innerHTML = "Employee is Invalid"
+					alert_msg.appendChild(msg)
+					break;
+			}
+			setTimeout(() => {
+				msg.innerHTML = null
+
+			}, 2000);
+
+		}
 
 </script>
 
